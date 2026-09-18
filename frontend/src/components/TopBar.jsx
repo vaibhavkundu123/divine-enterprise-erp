@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Menu,
   Plus,
@@ -7,6 +7,10 @@ import {
   Database,
   Layers,
   FileSpreadsheet,
+  Sparkles,
+  Compass,
+  ChevronDown,
+  BookOpen,
 } from 'lucide-react';
 
 export default function TopBar({
@@ -17,7 +21,21 @@ export default function TopBar({
   setMobileOpen,
   onExportMaster,
   isExportingMaster,
+  onStartMasterTour,
+  onStartTabTour,
 }) {
+  const [isTourOpen, setIsTourOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsTourOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const getTabLabel = (id) => {
     switch (id) {
       case 'dashboard':
@@ -101,6 +119,69 @@ export default function TopBar({
           />
           <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Sync Excel'}</span>
         </button>
+
+        {/* Interactive Tour & Guides Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsTourOpen(!isTourOpen)}
+            className="btn btn-outline text-xs px-2.5 sm:px-3 py-1.5 h-8 font-medium flex items-center gap-1.5 bg-gradient-to-r from-blue-950/60 to-indigo-950/60 hover:from-blue-900/60 hover:to-indigo-900/60 text-blue-300 border-blue-500/40 shadow-sm cursor-pointer"
+            title="Open Interactive Tour & Guided Manuals"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span className="hidden md:inline font-semibold">Tour & Manual</span>
+            <ChevronDown className="w-3 h-3 text-blue-400" />
+          </button>
+
+          {isTourOpen && (
+            <div className="absolute right-0 mt-2 w-72 bg-[#0d1322] border border-blue-500/30 rounded-xl shadow-2xl shadow-black/80 z-50 p-2 space-y-1.5 backdrop-blur-xl animate-fade-in">
+              <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase font-mono tracking-wider text-slate-400 border-b border-slate-800">
+                Interactive Manual & Tours
+              </div>
+
+              {/* Master Tour Option */}
+              <button
+                onClick={() => {
+                  setIsTourOpen(false);
+                  if (onStartMasterTour) onStartMasterTour();
+                }}
+                className="w-full text-left p-2.5 rounded-lg hover:bg-slate-800/80 transition-colors flex items-start gap-2.5 group cursor-pointer"
+              >
+                <div className="p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 shrink-0 group-hover:scale-105 transition-transform">
+                  <Compass className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors flex items-center gap-1">
+                    <span>🌟 Full Platform Tour</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                    Multi-tab guided walkthrough of all 11 ERP subsystems.
+                  </div>
+                </div>
+              </button>
+
+              {/* Tab Tour Option */}
+              <button
+                onClick={() => {
+                  setIsTourOpen(false);
+                  if (onStartTabTour) onStartTabTour();
+                }}
+                className="w-full text-left p-2.5 rounded-lg hover:bg-slate-800/80 transition-colors flex items-start gap-2.5 group cursor-pointer"
+              >
+                <div className="p-2 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-300 shrink-0 group-hover:scale-105 transition-transform">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors flex items-center gap-1">
+                    <span>💡 Guide to {getTabLabel(activeTab)}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                    Deep-dive instructions and tips for this active screen.
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
 
       </div>
     </header>

@@ -17,6 +17,7 @@ import {
   Database,
   ShieldCheck,
   X,
+  Sparkles,
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -27,6 +28,8 @@ export default function Sidebar({
   mobileOpen,
   setMobileOpen,
   kpis,
+  onStartMasterTour,
+  onStartTabTour,
 }) {
   const navSections = [
     {
@@ -201,6 +204,24 @@ export default function Sidebar({
 
         {/* Sleek Compact Footer */}
         <div className="p-2.5 border-t border-slate-800/80 bg-[#0a0f1a] space-y-2">
+          {/* Interactive Tour & Manual Launch Button */}
+          <button
+            onClick={() => {
+              if (onStartMasterTour) onStartMasterTour();
+              if (mobileOpen) setMobileOpen(false);
+            }}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-950/80 via-indigo-950/80 to-blue-900/60 hover:from-blue-900 hover:to-indigo-900 text-blue-200 border border-blue-500/35 shadow-sm transition-all cursor-pointer group"
+            title="Start Interactive Master Tour & Manual"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform animate-pulse" />
+              <span>Platform Tour</span>
+            </div>
+            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono font-bold border border-amber-500/30">
+              Interactive
+            </span>
+          </button>
+
           {/* Quick Sync & WAL Bar */}
           <div className="flex items-center justify-between gap-1.5">
             <button

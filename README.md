@@ -128,6 +128,7 @@ docker compose up -d --build
    - [Flow 8: Dual-Tier Excel &amp; 3NF CSV Synchronization](#flow-8-dual-tier-excel--3nf-csv-synchronization)
    - [Flow 9: System Health &amp; Multi-Subsystem Diagnostics](#flow-9-system-health--multi-subsystem-diagnostics)
    - [Flow 10: Zero-Cost 24/7 Remote Mobile Access](#flow-10-zero-cost-247-remote-mobile-access)
+   - [Flow 11: Interactive Playable Manual &amp; System Tour (Dual-Tier)](#flow-11-interactive-playable-manual--system-tour-dual-tier)
 7. [Financial Mathematics &amp; Calculation Engine (23 Formulas)](#-financial-mathematics--calculation-engine-23-formulas)
 8. [Divine AI Copilot Engine (5 Heuristic Rules)](#-divine-ai-copilot-engine-5-heuristic-rules)
 9. [Database Schema &amp; ORM Entities](#-database-schema--orm-entities)
@@ -416,6 +417,35 @@ Allows store managers and business owners to securely monitor and manage operati
        ├── Serves pre-compiled React 18 HUD
        └── Executes SQLite & Excel sync operations
 ```
+
+---
+
+### Flow 11: Interactive Playable Manual & System Tour (Dual-Tier)
+
+An embedded, interactive onboarding and operations engine with live play simulators directly inside the web interface:
+
+```mermaid
+graph LR
+    Launcher["Interactive Launcher\nTopBar / Dashboard / Sidebar"] --> TourModal["Interactive Tour HUD\nDimmed Glassmorphic Spotlight"]
+    TourModal --> Mode{"Tour Mode Selection"}
+    Mode -->|🌟 Master Platform Tour| MultiTab["11 Sequential Stages\nAuto-Navigates Tabs Live\n(Dashboard ➔ Sales ➔ Stock ➔ RTO ➔ ...)"]
+    Mode -->|💡 Tab-Specific Guide| DeepDive["Contextual View Guide\n(Deep-dive tips, features & actions)"]
+    MultiTab --> Sim["Interactive Play Simulators\n• Live Sales Profit & Margin Calc\n• Dynamic Stock Inward-Outward Equation\n• RTO 3-Stage State Selector\n• Marketing Blended ROAS Tier Scaler\n• Customer Returns QC Grading Matrix"]
+```
+
+#### Dual-Tier Architectural Features:
+1. **Master System Tour (Multi-Tab)**:
+   - **Auto-Navigates Tabs**: Advancing to the next step automatically switches the active tab in the background so operators see the real screen corresponding to the explanation.
+   - **11 Covered Subsystems**: Executive Overview, Sales Fulfillment, Stock Matrix, Courier RTO Quarantine, Customer Returns QC, Exchanges, Procurement Batches, Ads Spend & ROAS, Bank Treasury, Audit Trail, and System Health Diagnostics.
+2. **Tab-Specific Deep-Dive Guides**:
+   - Every active tab features a contextual guide providing operator tips, edge case instructions, and operational heuristics.
+3. **Special Interactive Features & Playable Simulators**:
+   - **Live Sales Profit Preview**: Adjust quantity and selling price to see gross revenue, COGS, gross profit, and margin % computed in real time.
+   - **Dynamic Stock Equation**: Test inward, dispatched, and restocked counts with auto-updating 4-tier stock health status badges (*Star*, *Adequate*, *Low*, *Depleted*).
+   - **RTO 3-Stage Pipeline Switcher**: Click through *In-Transit*, *Dock Quarantine*, *Restocked (+1)*, and *Damaged Loss* to observe warehouse inventory reactions.
+   - **Blended ROAS Scaler**: Test ad spend vs revenue with dynamic tier badges (*Exceptional* $\ge 4.0\text{x}$, *Profitable*, *Marginal*, *Sub-threshold*).
+   - **Customer Return QC Decision Hub**: Test *Grade A Pristine*, *Grade B Repackage*, *Damaged Write-off*, and *Dispute Claim*.
+   - **Controls & Accessibility**: Full keyboard support (`[ESC]` to exit, `[←]` / `[→]` arrows to navigate), clickable progress dots, and glowing progress bar.
 
 ---
 

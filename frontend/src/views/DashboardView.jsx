@@ -8,6 +8,9 @@ import {
   Undo2,
   ArrowLeftRight,
   Zap,
+  Sparkles,
+  Play,
+  BookOpen,
 } from 'lucide-react';
 import AICopilotBanner from '../components/AICopilotBanner';
 import TrendWaveforms from '../components/TrendWaveforms';
@@ -25,6 +28,8 @@ export default function DashboardView({
   onRestockReturns,
   onRestockExchanges,
   onNavigateTab,
+  onStartMasterTour,
+  onStartTabTour,
 }) {
   const [recentSales, setRecentSales] = useState([]);
   const [loadingSales, setLoadingSales] = useState(false);
@@ -61,6 +66,48 @@ export default function DashboardView({
         onActionClick={onActionClick}
         onRestockDock={onRestockDock}
       />
+
+      {/* 1.5 Interactive ERP Walkthrough & Subsystem Guide Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950/80 via-indigo-950/70 to-slate-900/90 border border-blue-500/35 p-4 sm:p-5 shadow-lg shadow-blue-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/30 shrink-0">
+            <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight font-heading">
+                Interactive ERP Walkthrough & Playable Manual
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                11 Subsystems
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
+              Explore the multi-tab guided tour explaining all operational modules, 3-stage reverse logistics dock quarantines, live profit math simulators, and continuous zero-drift reconciliation.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={onStartTabTour}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-all cursor-pointer flex items-center gap-1.5"
+            title="Open Deep-Dive Guide for Executive Overview"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+            <span>Dashboard Guide</span>
+          </button>
+
+          <button
+            onClick={onStartMasterTour}
+            className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-600/30 transition-all cursor-pointer flex items-center gap-1.5"
+            title="Launch Full 11-Stage Platform Master Tour"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Start Master Tour</span>
+          </button>
+        </div>
+      </div>
 
       {/* 2. Executive Hero KPIs (4 Hero Cards matching reference telemetry) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

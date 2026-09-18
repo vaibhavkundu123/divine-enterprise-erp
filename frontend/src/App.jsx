@@ -15,6 +15,7 @@ import AuditView from './views/AuditView';
 import TasksView from './views/TasksView';
 import StatusView from './views/StatusView';
 import GlobalRecordSaleModal from './modals/GlobalRecordSaleModal';
+import InteractiveTour from './components/InteractiveTour';
 import { api } from './services/api';
 import { exportMasterWorkbook } from './utils/exportUtils';
 
@@ -37,6 +38,20 @@ export default function App() {
   const [isRecordSaleOpen, setIsRecordSaleOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [isMasterExporting, setIsMasterExporting] = useState(false);
+
+  // Interactive Tour & Playable Manual State
+  const [isTourOpen, setIsTourOpen] = useState(false);
+  const [tourMode, setTourMode] = useState('master'); // 'master' | 'tab'
+
+  const handleStartMasterTour = () => {
+    setTourMode('master');
+    setIsTourOpen(true);
+  };
+
+  const handleStartTabTour = () => {
+    setTourMode('tab');
+    setIsTourOpen(true);
+  };
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -163,6 +178,8 @@ export default function App() {
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
         kpis={kpis}
+        onStartMasterTour={handleStartMasterTour}
+        onStartTabTour={handleStartTabTour}
       />
 
       {/* Main Viewport Container */}
@@ -178,6 +195,8 @@ export default function App() {
           onHorizonChange={setHorizon}
           onExportMaster={handleMasterExport}
           isExportingMaster={isMasterExporting}
+          onStartMasterTour={handleStartMasterTour}
+          onStartTabTour={handleStartTabTour}
         />
 
         {/* Scrollable View Area */}
@@ -194,6 +213,8 @@ export default function App() {
               onRestockReturns={handleRestockReturns}
               onRestockExchanges={handleRestockExchanges}
               onNavigateTab={setActiveTab}
+              onStartMasterTour={handleStartMasterTour}
+              onStartTabTour={handleStartTabTour}
             />
           )}
 
@@ -234,6 +255,15 @@ export default function App() {
           loadDashboardData();
         }}
         styleCatalog={styleCatalog}
+      />
+
+      {/* Interactive Tour & Playable Manual System */}
+      <InteractiveTour
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        tourMode={tourMode}
+        activeTab={activeTab}
+        onNavigateTab={setActiveTab}
       />
     </div>
   );
