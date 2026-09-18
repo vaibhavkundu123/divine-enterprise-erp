@@ -96,6 +96,7 @@ export default function TopBar({
         <button
           onClick={onExportMaster}
           disabled={isExportingMaster}
+          data-tour="topbar-export"
           className="btn btn-primary text-xs px-2.5 sm:px-3 py-1.5 h-8 font-medium flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500"
           title="Fetch all module data and export Divine_Master_Ledger.xlsx with all sheets"
         >
@@ -111,6 +112,7 @@ export default function TopBar({
         <button
           onClick={onSyncClick}
           disabled={isSyncing}
+          data-tour="topbar-sync"
           className="btn btn-outline text-xs px-2.5 sm:px-3 py-1.5 h-8 font-medium"
           title="Synchronize SQLite with Excel workbooks and CSV files"
         >
@@ -124,6 +126,7 @@ export default function TopBar({
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsTourOpen(!isTourOpen)}
+            data-tour="topbar-tour"
             className="btn btn-outline text-xs px-2.5 sm:px-3 py-1.5 h-8 font-medium flex items-center gap-1.5 bg-gradient-to-r from-blue-950/60 to-indigo-950/60 hover:from-blue-900/60 hover:to-indigo-900/60 text-blue-300 border-blue-500/40 shadow-sm cursor-pointer"
             title="Open Interactive Tour & Guided Manuals"
           >

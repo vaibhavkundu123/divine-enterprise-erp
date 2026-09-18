@@ -73,7 +73,7 @@ export default function StockView() {
   return (
     <div className="space-y-5">
       {/* Summary HUD Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div data-tour="stock-hud" className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="glass-panel p-4">
           <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Catalog SKUs</div>
           <div className="text-xl sm:text-2xl font-extrabold text-white font-mono mt-1">{stock.length} Styles</div>
@@ -103,7 +103,7 @@ export default function StockView() {
       {/* Top Filter & Export Bar */}
       <div className="glass-panel p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-          <div className="relative w-full sm:w-64">
+          <div data-tour="stock-search" className="relative w-full sm:w-64">
             <label htmlFor="stock-search-sku" className="sr-only">Search Style SKU</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
@@ -118,7 +118,7 @@ export default function StockView() {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+          <div data-tour="stock-status-filter" className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
             {['ALL', 'In Stock', 'Low Stock', 'Out of Stock', 'Over Sold'].map((st) => (
               <button
                 key={st}
@@ -135,19 +135,19 @@ export default function StockView() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+        <div data-tour="stock-export" className="flex items-center gap-2 w-full md:w-auto justify-end">
           <button
             onClick={loadStock}
-            className="p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700"
+            className="p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700 cursor-pointer"
             title="Refresh Stock"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
           </button>
-          <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3.5 h-10 bg-slate-900/80 border-slate-700 hover:bg-slate-800">
+          <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3.5 h-10 bg-slate-900/80 border-slate-700 hover:bg-slate-800 cursor-pointer">
             <Download className="w-3.5 h-3.5 text-emerald-400" />
             <span>Excel (.xlsx)</span>
           </button>
-          <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3.5 h-10 bg-slate-900/80 border-slate-700 hover:bg-slate-800">
+          <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3.5 h-10 bg-slate-900/80 border-slate-700 hover:bg-slate-800 cursor-pointer">
             <Download className="w-3.5 h-3.5 text-blue-400" />
             <span>CSV</span>
           </button>
@@ -155,24 +155,24 @@ export default function StockView() {
       </div>
 
       {/* Stock Matrix Table */}
-      <div className="glass-panel overflow-hidden border border-slate-800 shadow-xl">
+      <div className="glass-panel overflow-hidden border border-slate-800 shadow-xl" data-tour="stock-table">
         <div className="overflow-x-auto max-h-[600px] scrollbar-thin">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/95 sticky top-0 z-20 text-slate-400 font-bold border-b border-slate-800 backdrop-blur-md">
               <tr>
-                <th className="py-3.5 px-4 font-mono">Style No.</th>
-                <th className="py-3.5 px-4 text-center">Purchased (Inflow)</th>
-                <th className="py-3.5 px-4 text-center">Sold (Outflow)</th>
+                <th data-tour="stock-col-sku" className="py-3.5 px-4 font-mono">Style No.</th>
+                <th data-tour="stock-col-inflow" className="py-3.5 px-4 text-center">Purchased (Inflow)</th>
+                <th data-tour="stock-col-outflow" className="py-3.5 px-4 text-center">Sold (Outflow)</th>
                 <th className="py-3.5 px-4 text-center">Exchanged Out (Sent)</th>
-                <th className="py-3.5 px-4 text-center">Restocked RTO 🚚</th>
+                <th data-tour="stock-col-restocked" className="py-3.5 px-4 text-center">Restocked RTO 🚚</th>
                 <th className="py-3.5 px-4 text-center">Restocked CR ↩️</th>
                 <th className="py-3.5 px-4 text-center">Restocked Exch 🔄</th>
-                <th className="py-3.5 px-4 text-center font-extrabold text-white">Stock on Hand</th>
-                <th className="py-3.5 px-4 text-right">Unit Cost ($)</th>
+                <th data-tour="stock-col-hand" className="py-3.5 px-4 text-center font-extrabold text-white">Stock on Hand</th>
+                <th data-tour="stock-col-wac" className="py-3.5 px-4 text-right">Unit Cost ($)</th>
                 <th className="py-3.5 px-4 text-right">Stock Valuation ($)</th>
                 <th className="py-3.5 px-4 text-right">Total Revenue ($)</th>
                 <th className="py-3.5 px-4 text-right">Total Profit ($)</th>
-                <th className="py-3.5 px-4 text-center">Stock Status</th>
+                <th data-tour="stock-col-status" className="py-3.5 px-4 text-center">Stock Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

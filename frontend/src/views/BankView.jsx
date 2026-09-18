@@ -110,9 +110,9 @@ export default function BankView() {
   return (
     <div className="space-y-6">
       {/* 4-Card Bank Reconciliation HUD matching localhost:5001 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-tour="bank-hud">
         {/* Card 1: Current Bank Balance */}
-        <div className="glass-panel p-5 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+        <div className="glass-panel p-5 relative overflow-hidden group hover:border-emerald-500/40 transition-all" data-tour="bank-balance-card">
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
             <span className="flex items-center gap-1.5">
               <Landmark className="w-3.5 h-3.5 text-emerald-400" />
@@ -207,9 +207,9 @@ export default function BankView() {
       </div>
 
       {/* Toolbar with Search, Filter Pills & Actions */}
-      <div className="glass-panel p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="glass-panel p-4 flex flex-col md:flex-row items-center justify-between gap-3" data-tour="bank-toolbar">
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-64" data-tour="bank-search">
             <label htmlFor="bank-search-input" className="sr-only">Search transactions</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
@@ -225,7 +225,7 @@ export default function BankView() {
           </div>
 
           {/* Filter Pills matching reference */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" data-tour="bank-filter">
             <button
               onClick={() => setTypeFilter('ALL')}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
@@ -262,15 +262,17 @@ export default function BankView() {
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-          <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9">
-            <Download className="w-3.5 h-3.5" />
-            <span>Excel</span>
-          </button>
-          <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9">
-            <Download className="w-3.5 h-3.5" />
-            <span>CSV</span>
-          </button>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9">
+          <div className="flex items-center gap-2" data-tour="bank-export">
+            <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9">
+              <Download className="w-3.5 h-3.5" />
+              <span>Excel</span>
+            </button>
+            <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9">
+              <Download className="w-3.5 h-3.5" />
+              <span>CSV</span>
+            </button>
+          </div>
+          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9" data-tour="bank-add-btn">
             <Plus className="w-3.5 h-3.5" />
             <span>Record Bank Entry</span>
           </button>
@@ -278,17 +280,17 @@ export default function BankView() {
       </div>
 
       {/* Transactions Table */}
-      <div className="glass-panel overflow-hidden border border-slate-800">
+      <div className="glass-panel overflow-hidden border border-slate-800" data-tour="bank-table">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Transaction Type</th>
-                <th className="py-3 px-4 text-right">Amount ($)</th>
-                <th className="py-3 px-4 text-right">Closing Running Balance ($)</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <th className="py-3 px-4" data-tour="bank-col-type">Transaction Type</th>
+                <th className="py-3 px-4 text-right" data-tour="bank-col-amount">Amount ($)</th>
+                <th className="py-3 px-4 text-right" data-tour="bank-col-balance">Closing Running Balance ($)</th>
+                <th className="py-3 px-4 text-center" data-tour="bank-col-actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

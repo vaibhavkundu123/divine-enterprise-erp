@@ -61,9 +61,9 @@ export default function AuditView() {
   return (
     <div className="space-y-4">
       {/* Top Filter and Controls */}
-      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3" data-tour="audit-toolbar">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-64" data-tour="audit-search">
             <label htmlFor="audit-search-input" className="sr-only">Search audit trail</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
@@ -78,7 +78,7 @@ export default function AuditView() {
             />
           </div>
 
-          <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer select-none">
+          <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer select-none" data-tour="audit-poll">
             <input
               type="checkbox"
               checked={autoRefresh}
@@ -94,11 +94,12 @@ export default function AuditView() {
             href="/api/audit/export-csv"
             download
             className="btn btn-outline text-xs px-3 h-9"
+            data-tour="audit-export"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
           </a>
-          <button onClick={handleClear} className="btn btn-danger text-xs px-3 h-9">
+          <button onClick={handleClear} className="btn btn-danger text-xs px-3 h-9" data-tour="audit-clear">
             <Trash2 className="w-3.5 h-3.5" />
             <span>Archive & Clear</span>
           </button>
@@ -106,7 +107,7 @@ export default function AuditView() {
       </div>
 
       {/* Category Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none" data-tour="audit-filters">
         {categories.map((cat) => (
           <button
             key={cat}
@@ -123,16 +124,16 @@ export default function AuditView() {
       </div>
 
       {/* Logs Stream Table */}
-      <div className="glass-panel overflow-hidden border border-white/10">
+      <div className="glass-panel overflow-hidden border border-white/10" data-tour="audit-table">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-white/10">
               <tr>
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Timestamp</th>
-                <th className="py-3 px-4">Domain Category</th>
-                <th className="py-3 px-4">Action</th>
-                <th className="py-3 px-4">Summary</th>
+                <th className="py-3 px-4" data-tour="audit-col-cat">Domain Category</th>
+                <th className="py-3 px-4" data-tour="audit-col-action">Action</th>
+                <th className="py-3 px-4" data-tour="audit-col-summary">Summary</th>
                 <th className="py-3 px-4">Source</th>
                 <th className="py-3 px-4 text-center">Severity</th>
               </tr>

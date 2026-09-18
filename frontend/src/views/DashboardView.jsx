@@ -61,14 +61,16 @@ export default function DashboardView({
   return (
     <div className="space-y-6">
       {/* 1. AI Copilot Action Recommendation Banner */}
-      <AICopilotBanner
-        insights={copilotInsights}
-        onActionClick={onActionClick}
-        onRestockDock={onRestockDock}
-      />
+      <div data-tour="dash-copilot">
+        <AICopilotBanner
+          insights={copilotInsights}
+          onActionClick={onActionClick}
+          onRestockDock={onRestockDock}
+        />
+      </div>
 
       {/* 1.5 Interactive ERP Walkthrough & Subsystem Guide Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950/80 via-indigo-950/70 to-slate-900/90 border border-blue-500/35 p-4 sm:p-5 shadow-lg shadow-blue-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="dash-tour-banner" className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950/80 via-indigo-950/70 to-slate-900/90 border border-blue-500/35 p-4 sm:p-5 shadow-lg shadow-blue-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/30 shrink-0">
             <Sparkles className="w-5 h-5 animate-pulse text-amber-300" />
@@ -112,7 +114,7 @@ export default function DashboardView({
       {/* 2. Executive Hero KPIs (4 Hero Cards matching reference telemetry) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Net Realized Profit */}
-        <div className="glass-panel p-5 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+        <div data-tour="dash-kpi-profit" className="glass-panel p-5 relative overflow-hidden group hover:border-emerald-500/40 transition-all">
           <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
             <span>Net Realized Profit</span>
@@ -137,7 +139,7 @@ export default function DashboardView({
         </div>
 
         {/* Card 2: Net Realized Revenue */}
-        <div className="glass-panel p-5 relative overflow-hidden group hover:border-blue-500/40 transition-all">
+        <div data-tour="dash-kpi-revenue" className="glass-panel p-5 relative overflow-hidden group hover:border-blue-500/40 transition-all">
           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl pointer-events-none"></div>
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
             <span>Net Realized Revenue</span>
@@ -157,7 +159,7 @@ export default function DashboardView({
         </div>
 
         {/* Card 3: Marketing & Ad Spend */}
-        <div className="glass-panel p-5 relative overflow-hidden group hover:border-purple-500/40 transition-all">
+        <div data-tour="dash-kpi-ads" className="glass-panel p-5 relative overflow-hidden group hover:border-purple-500/40 transition-all">
           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-2xl pointer-events-none"></div>
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
             <span>Marketing & Ad Spend</span>
@@ -177,7 +179,7 @@ export default function DashboardView({
         </div>
 
         {/* Card 4: Sellable Inventory */}
-        <div className="glass-panel p-5 relative overflow-hidden group hover:border-amber-500/40 transition-all">
+        <div data-tour="dash-kpi-valuation" className="glass-panel p-5 relative overflow-hidden group hover:border-amber-500/40 transition-all">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2 font-medium">
             <span>Sellable Inventory</span>
@@ -204,7 +206,7 @@ export default function DashboardView({
       {/* 3. Dock Operational Overview Strips (3 Strips matching localhost:5001) */}
       <div className="space-y-2.5">
         {/* Strip 1: RTO Pipeline Strip */}
-        <div className="operational-strip border-blue-500/20 bg-slate-900/60">
+        <div data-tour="dash-strip-rto" className="operational-strip border-blue-500/20 bg-slate-900/60">
           <div className="op-pill-group">
             <span className="op-pill">
               <RotateCcw className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -252,7 +254,7 @@ export default function DashboardView({
         </div>
 
         {/* Strip 2: Customer Returns Strip */}
-        <div className="operational-strip border-indigo-500/25 bg-slate-900/60">
+        <div data-tour="dash-strip-returns" className="operational-strip border-indigo-500/25 bg-slate-900/60">
           <div className="op-pill-group">
             <span className="op-pill">
               <Undo2 className="w-3.5 h-3.5 text-sky-400 shrink-0" />
@@ -300,7 +302,7 @@ export default function DashboardView({
         </div>
 
         {/* Strip 3: Item Exchanges Strip */}
-        <div className="operational-strip border-emerald-500/25 bg-slate-900/60">
+        <div data-tour="dash-strip-exchanges" className="operational-strip border-emerald-500/25 bg-slate-900/60">
           <div className="op-pill-group">
             <span className="op-pill">
               <ArrowLeftRight className="w-3.5 h-3.5 text-blue-400 shrink-0" />
@@ -347,7 +349,7 @@ export default function DashboardView({
       </div>
 
       {/* 4. Financial Waveform Intelligence */}
-      <div>
+      <div data-tour="dash-waveforms">
         <TrendWaveforms
           waveforms={waveforms}
           horizon={horizon}
@@ -358,7 +360,7 @@ export default function DashboardView({
       {/* 5. Quick Summary Widgets Grid (Recent Sales Snapshot & Low Stock Radar) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Widget 1: Recent Sales Snapshot */}
-        <div className="glass-panel p-5">
+        <div data-tour="dash-recent-sales" className="glass-panel p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-sm">🛒</span>
@@ -386,13 +388,11 @@ export default function DashboardView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {loadingSales ? (
+                {recentSales.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="py-6 text-center text-slate-400">Loading transactions...</td>
-                  </tr>
-                ) : recentSales.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="py-6 text-center text-slate-400">No sales recorded yet</td>
+                    <td colSpan="5" className="py-8 text-center text-slate-400">
+                      {loadingSales ? 'Loading recent sales...' : 'No sales recorded yet.'}
+                    </td>
                   </tr>
                 ) : (
                   recentSales.map((s, idx) => (
@@ -423,7 +423,7 @@ export default function DashboardView({
         </div>
 
         {/* Widget 2: Low Stock & Restock Radar */}
-        <div className="glass-panel p-5">
+        <div data-tour="dash-low-stock" className="glass-panel p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-sm">⚠️</span>

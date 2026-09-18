@@ -58,7 +58,7 @@ export default function AnalyticsView() {
   return (
     <div className="space-y-6">
       {/* Top Filter & View Controls */}
-      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3" data-tour="analytics-controls">
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setViewMode('both')}
@@ -97,7 +97,7 @@ export default function AnalyticsView() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-tour="analytics-export">
           {showSales && (
             <button
               onClick={() => handleExportSales('excel')}
@@ -124,7 +124,7 @@ export default function AnalyticsView() {
 
       {/* TABLE 1: DAILY SALES & GROSS PROFIT BREAKDOWN */}
       {showSales && (
-        <div className="glass-panel overflow-hidden border border-slate-800">
+        <div className="glass-panel overflow-hidden border border-slate-800" data-tour="analytics-sales-table">
           <div className="p-4 border-b border-slate-800 flex items-center justify-between">
             <div>
               <h3 className="font-bold text-sm text-white font-heading flex items-center gap-2">
@@ -215,7 +215,7 @@ export default function AnalyticsView() {
 
       {/* TABLE 2: DAILY ADVERTISEMENT SPEND BREAKDOWN */}
       {showAds && (
-        <div className="glass-panel overflow-hidden border border-slate-800">
+        <div className="glass-panel overflow-hidden border border-slate-800" data-tour="analytics-ads-table">
           <div className="p-4 border-b border-slate-800 flex items-center justify-between">
             <div>
               <h3 className="font-bold text-sm text-white font-heading flex items-center gap-2">

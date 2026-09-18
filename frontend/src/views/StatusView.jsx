@@ -58,7 +58,7 @@ export default function StatusView() {
   return (
     <div className="space-y-6">
       {/* Header & Primary Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/60 p-6 rounded-2xl border border-slate-800/80 backdrop-blur-xl shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/60 p-6 rounded-2xl border border-slate-800/80 backdrop-blur-xl shadow-xl" data-tour="status-header">
         <div className="flex items-center gap-4">
           <div className="p-3.5 bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-xl shadow-lg shadow-emerald-500/20">
             <ShieldCheck className="w-7 h-7" />
@@ -88,6 +88,7 @@ export default function StatusView() {
             onClick={fetchStatus}
             disabled={loading}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-xl border border-slate-700/80 transition-all disabled:opacity-50 shadow-sm cursor-pointer"
+            data-tour="status-rerun-btn"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
             <span>Re-run Diagnostics</span>
@@ -97,6 +98,7 @@ export default function StatusView() {
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-xl transition-all shadow-md shadow-emerald-600/20"
+            data-tour="status-url-btn"
           >
             <ExternalLink className="w-4 h-4" />
             <span>Dedicated /status URL</span>
@@ -113,7 +115,7 @@ export default function StatusView() {
       </div>
 
       {/* URL Quick-Access Banner */}
-      <div className="bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-purple-950/20 p-4 rounded-xl border border-blue-800/30 flex flex-col md:flex-row items-center justify-between gap-3 text-sm">
+      <div className="bg-gradient-to-r from-blue-950/40 via-indigo-950/30 to-purple-950/20 p-4 rounded-xl border border-blue-800/30 flex flex-col md:flex-row items-center justify-between gap-3 text-sm" data-tour="status-quick-banner">
         <div className="flex items-center gap-3">
           <span className="text-xl">🌐</span>
           <div>
@@ -153,9 +155,9 @@ export default function StatusView() {
       )}
 
       {data && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" data-tour="status-probes-grid">
           {/* Card 1: API Service & Process Uptime */}
-          <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800/80 shadow-lg space-y-4">
+          <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800/80 shadow-lg space-y-4" data-tour="status-card-runtime">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <Activity className="w-5 h-5 text-blue-400" />
@@ -190,7 +192,7 @@ export default function StatusView() {
           </div>
 
           {/* Card 2: SQLite Database & Table Audits */}
-          <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800/80 shadow-lg space-y-4">
+          <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800/80 shadow-lg space-y-4" data-tour="status-card-db">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <Database className="w-5 h-5 text-purple-400" />
@@ -225,7 +227,7 @@ export default function StatusView() {
           </div>
 
           {/* Card 3: Financial Zero-Drift Integrity */}
-          <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800/80 shadow-lg space-y-4">
+          <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800/80 shadow-lg space-y-4" data-tour="status-card-financial">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2.5">
                 <BadgeDollarSign className="w-5 h-5 text-amber-400" />

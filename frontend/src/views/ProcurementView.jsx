@@ -65,9 +65,9 @@ export default function ProcurementView() {
 
   return (
     <div className="space-y-4">
-      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3" data-tour="proc-hud">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-64" data-tour="proc-search">
             <label htmlFor="proc-search-input" className="sr-only">Search SKU or Date</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
@@ -82,7 +82,7 @@ export default function ProcurementView() {
             />
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-lg border border-white/10">
+          <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-lg border border-white/10" data-tour="proc-subtabs">
             <button
               onClick={() => setActiveSubTab('batches')}
               className={`px-3 py-1 rounded text-xs font-semibold cursor-pointer ${activeSubTab === 'batches' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
@@ -102,11 +102,12 @@ export default function ProcurementView() {
           <button
             onClick={() => exportToExcel(batches, `Procurement_Batches_${new Date().toISOString().split('T')[0]}.xlsx`, 'Transactions')}
             className="btn btn-outline text-xs px-3 h-9"
+            data-tour="proc-export"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Excel</span>
           </button>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9">
+          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9" data-tour="proc-add-btn">
             <Plus className="w-3.5 h-3.5" />
             <span>Inward Batch</span>
           </button>
@@ -114,18 +115,18 @@ export default function ProcurementView() {
       </div>
 
       {activeSubTab === 'batches' ? (
-        <div className="glass-panel overflow-hidden border border-white/10">
+        <div className="glass-panel overflow-hidden border border-white/10" data-tour="proc-table">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-white/10">
                 <tr>
                   <th className="py-3 px-4">#</th>
                   <th className="py-3 px-4">Arrival Date</th>
-                  <th className="py-3 px-4">Style SKU</th>
-                  <th className="py-3 px-4 text-center">Inward Inventory</th>
-                  <th className="py-3 px-4 text-right">Purchase Rate</th>
-                  <th className="py-3 px-4 text-right">Total Batch Value</th>
-                  <th className="py-3 px-4 text-center">Actions</th>
+                  <th className="py-3 px-4" data-tour="proc-col-sku">Style SKU</th>
+                  <th className="py-3 px-4 text-center" data-tour="proc-col-qty">Inward Inventory</th>
+                  <th className="py-3 px-4 text-right" data-tour="proc-col-rate">Purchase Rate</th>
+                  <th className="py-3 px-4 text-right" data-tour="proc-col-value">Total Batch Value</th>
+                  <th className="py-3 px-4 text-center" data-tour="proc-col-actions">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">

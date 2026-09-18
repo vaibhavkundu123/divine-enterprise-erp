@@ -1,73 +1,194 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X,
   ChevronRight,
   ChevronLeft,
   Sparkles,
-  Play,
-  RotateCcw,
-  CheckCircle2,
-  HelpCircle,
-  Lightbulb,
-  ExternalLink,
-  Calculator,
   Compass,
-  ArrowRight,
-  ShieldCheck,
-  Undo2,
-  ArrowLeftRight,
-  Truck,
-  Megaphone,
-  Landmark,
-  History,
-  Layers,
-  BarChart3,
-  Sliders,
-  AlertTriangle,
-  Flame,
+  Lightbulb,
+  CheckCircle2,
 } from 'lucide-react';
 import { MASTER_TOUR_STEPS, TAB_TOURS } from '../utils/tourSteps';
 
 export default function InteractiveTour({
   isOpen,
   onClose,
-  tourMode = 'master', // 'master' | 'tab'
-  activeTab = 'dashboard',
+  tourMode = 'tab', // 'tab' | 'master'
+  activeTab = 'sales',
   onNavigateTab,
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [mode, setMode] = useState(tourMode);
+  const [targetRect, setTargetRect] = useState(null);
+  const [popoverPos, setPopoverPos] = useState({ top: 100, left: 100, placement: 'bottom' });
+  const [arrowOffset, setArrowOffset] = useState(24);
+  const popoverRef = useRef(null);
 
-  // --- Interactive Play Simulation States ---
-  // 1. Sales Simulation
-  const [simQty, setSimQty] = useState(3);
-  const [simPrice, setSimPrice] = useState(48);
-  const simCost = 14.5;
-
-  // 2. Stock Simulation
-  const [simInward, setSimInward] = useState(100);
-  const [simDispatched, setSimDispatched] = useState(65);
-  const [simRestocked, setSimRestocked] = useState(12);
-
-  // 3. RTO 3-Stage Pipeline State
-  const [rtoStage, setRtoStage] = useState('dock'); // 'transit' | 'dock' | 'restocked' | 'damaged'
-
-  // 4. Marketing ROAS Simulation
-  const [simAdSpend, setSimAdSpend] = useState(1200);
-  const [simAdRev, setSimAdRev] = useState(4600);
-
-  // 5. Returns QC Simulation
-  const [qcGrade, setQcGrade] = useState('gradeA'); // 'gradeA' | 'gradeB' | 'damaged' | 'dispute'
-
-  // Sync mode and reset step when tour opens or target changes
+  // Sync mode and reset step when tour opens or tourMode prop changes
   useEffect(() => {
     if (isOpen) {
       setMode(tourMode);
       setCurrentStep(0);
     }
-  }, [isOpen, tourMode, activeTab]);
+  }, [isOpen, tourMode]);
 
-  // Keyboard navigation listener (Esc to exit, Arrow keys to navigate)
+  // Current steps array
+  const isMaster = mode === 'master';
+  const steps = isMaster
+    ? MASTER_TOUR_STEPS
+    : (TAB_TOURS[activeTab]?.steps || []);
+  const totalSteps = steps.length;
+  const currentData = steps[currentStep] || steps[0];
+
+  // Auto-navigate tab if in Master Tour
+  const syncTabForStep = useCallback((stepIndex) => {
+    if (isMaster && MASTER_TOUR_STEPS[stepIndex]?.tab && onNavigateTab) {
+      onNavigateTab(MASTER_TOUR_STEPS[stepIndex].tab);
+    }
+  }, [isMaster, onNavigateTab]);
+
+  // Find target element(s) and compute union bounding rect
+  const updateTargetPosition = useCallback(() => {
+    if (!isOpen || !currentData?.selector) {
+      setTargetRect(null);
+      return;
+    }
+
+    try {
+      const elements = Array.from(document.querySelectorAll(currentData.selector));
+      if (elements.length === 0) {
+        setTargetRect(null);
+        return;
+      }
+
+      // Compute bounding box that unions all matching elements (e.g. cluster of columns)
+      let minTop = Infinity;
+      let minLeft = Infinity;
+      let maxRight = -Infinity;
+      let maxBottom = -Infinity;
+
+      elements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          minTop = Math.min(minTop, rect.top);
+          minLeft = Math.min(minLeft, rect.left);
+          maxRight = Math.max(maxRight, rect.right);
+          maxBottom = Math.max(maxBottom, rect.bottom);
+        }
+      });
+
+      if (minTop !== Infinity) {
+        const unionRect = {
+          top: minTop,
+          left: minLeft,
+          right: maxRight,
+          bottom: maxBottom,
+          width: maxRight - minLeft,
+          height: maxBottom - minTop,
+        };
+        setTargetRect(unionRect);
+
+        // Position popover relative to unionRect
+        const popoverWidth = 380;
+        const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 240;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        const preferred = currentData.preferredPlacement || 'bottom';
+
+        let placement = preferred;
+        let top = 0;
+        let left = 0;
+
+        // Space checks
+        const spaceBelow = windowHeight - unionRect.bottom;
+        const spaceAbove = unionRect.top;
+        const spaceRight = windowWidth - unionRect.right;
+        const spaceLeft = unionRect.left;
+
+        if (preferred === 'bottom' && spaceBelow < popoverHeight + 30 && spaceAbove > popoverHeight + 30) {
+          placement = 'top';
+        } else if (preferred === 'top' && spaceAbove < popoverHeight + 30 && spaceBelow > popoverHeight + 30) {
+          placement = 'bottom';
+        } else if (preferred === 'right' && spaceRight < popoverWidth + 30 && spaceLeft > popoverWidth + 30) {
+          placement = 'left';
+        } else if (preferred === 'left' && spaceLeft < popoverWidth + 30 && spaceRight > popoverWidth + 30) {
+          placement = 'right';
+        }
+
+        if (placement === 'bottom') {
+          top = unionRect.bottom + 16;
+          left = unionRect.left + (unionRect.width / 2) - (popoverWidth / 2);
+        } else if (placement === 'top') {
+          top = unionRect.top - popoverHeight - 16;
+          left = unionRect.left + (unionRect.width / 2) - (popoverWidth / 2);
+        } else if (placement === 'right') {
+          top = unionRect.top + (unionRect.height / 2) - (popoverHeight / 2);
+          left = unionRect.right + 16;
+        } else if (placement === 'left') {
+          top = unionRect.top + (unionRect.height / 2) - (popoverHeight / 2);
+          left = unionRect.left - popoverWidth - 16;
+        }
+
+        // Clamp inside viewport
+        const clampedLeft = Math.max(16, Math.min(left, windowWidth - popoverWidth - 16));
+        const clampedTop = Math.max(16, Math.min(top, windowHeight - popoverHeight - 16));
+
+        // Arrow calculation
+        let calculatedArrowOffset = 24;
+        if (placement === 'top' || placement === 'bottom') {
+          const targetCenter = unionRect.left + (unionRect.width / 2);
+          calculatedArrowOffset = Math.max(20, Math.min(targetCenter - clampedLeft, popoverWidth - 24));
+        } else {
+          const targetCenter = unionRect.top + (unionRect.height / 2);
+          calculatedArrowOffset = Math.max(20, Math.min(targetCenter - clampedTop, popoverHeight - 24));
+        }
+
+        setPopoverPos({ top: clampedTop, left: clampedLeft, placement });
+        setArrowOffset(calculatedArrowOffset);
+      }
+    } catch (err) {
+      console.warn('Tour target error:', err);
+    }
+  }, [isOpen, currentData]);
+
+  // Smooth scroll target into view on step change
+  useEffect(() => {
+    if (!isOpen || !currentData?.selector) return;
+
+    // Small delay to allow tab transitions or DOM renders
+    const scrollTimer = setTimeout(() => {
+      try {
+        const el = document.querySelector(currentData.selector);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+      } catch (e) {
+        // ignore invalid selector
+      }
+      updateTargetPosition();
+    }, 120);
+
+    return () => clearTimeout(scrollTimer);
+  }, [isOpen, currentStep, mode, activeTab, currentData, updateTargetPosition]);
+
+  // Window listeners for continuous alignment
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleUpdate = () => updateTargetPosition();
+    window.addEventListener('scroll', handleUpdate, true);
+    window.addEventListener('resize', handleUpdate);
+
+    const interval = setInterval(handleUpdate, 400);
+
+    return () => {
+      window.removeEventListener('scroll', handleUpdate, true);
+      window.removeEventListener('resize', handleUpdate);
+      clearInterval(interval);
+    };
+  }, [isOpen, updateTargetPosition]);
+
+  // Keyboard controls (Left/Right arrow, Esc)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!isOpen) return;
@@ -84,26 +205,9 @@ export default function InteractiveTour({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentStep, mode, activeTab]);
+  }, [isOpen, currentStep, totalSteps, isMaster]);
 
-  if (!isOpen) return null;
-
-  // Determine current steps array
-  const isMaster = mode === 'master';
-  const steps = isMaster
-    ? MASTER_TOUR_STEPS
-    : (TAB_TOURS[activeTab]?.steps || []);
-
-  const totalSteps = steps.length;
-  const currentData = steps[currentStep] || steps[0];
-  const progressPercent = Math.round(((currentStep + 1) / totalSteps) * 100);
-
-  // Auto-navigate tab if in Master Tour
-  const syncTabForStep = (stepIndex) => {
-    if (isMaster && MASTER_TOUR_STEPS[stepIndex]?.tab && onNavigateTab) {
-      onNavigateTab(MASTER_TOUR_STEPS[stepIndex].tab);
-    }
-  };
+  if (!isOpen || !currentData) return null;
 
   const handleNext = () => {
     if (currentStep < totalSteps - 1) {
@@ -123,11 +227,6 @@ export default function InteractiveTour({
     }
   };
 
-  const jumpToStep = (index) => {
-    setCurrentStep(index);
-    syncTabForStep(index);
-  };
-
   const toggleMode = (newMode) => {
     setMode(newMode);
     setCurrentStep(0);
@@ -136,519 +235,198 @@ export default function InteractiveTour({
     }
   };
 
-  // Calculations for Sales simulation
-  const simRevenue = simQty * simPrice;
-  const simCogs = simQty * simCost;
-  const simProfit = simRevenue - simCogs;
-  const simMargin = simRevenue > 0 ? ((simProfit / simRevenue) * 100).toFixed(1) : 0;
+  const progressPercent = Math.round(((currentStep + 1) / totalSteps) * 100);
 
-  // Calculations for Stock simulation
-  const simUsableStock = Math.max(0, simInward - simDispatched + simRestocked);
-  let stockHealth = 'Star';
-  let stockHealthClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-  if (simUsableStock === 0) {
-    stockHealth = 'Depleted';
-    stockHealthClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-  } else if (simUsableStock < 10) {
-    stockHealth = 'Low';
-    stockHealthClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-  } else if (simUsableStock < 30) {
-    stockHealth = 'Adequate';
-    stockHealthClass = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
-  }
-
-  // Calculations for ROAS simulation
-  const simRoas = simAdSpend > 0 ? (simAdRev / simAdSpend).toFixed(2) : '0.00';
-  let roasTier = 'Profitable';
-  let roasTierBadge = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
-  let roasGuidance = 'Healthy commercial scale.';
-  if (parseFloat(simRoas) >= 4.0) {
-    roasTier = 'Exceptional';
-    roasTierBadge = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-    roasGuidance = 'Scale marketing budget aggressively.';
-  } else if (parseFloat(simRoas) < 1.5) {
-    roasTier = 'Sub-threshold';
-    roasTierBadge = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-    roasGuidance = 'Pause creative or optimize targeting immediately.';
-  } else if (parseFloat(simRoas) < 2.5) {
-    roasTier = 'Marginal';
-    roasTierBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
-    roasGuidance = 'Audit creative assets and conversion rates.';
-  }
+  // Padding around the highlighted element
+  const pad = 6;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 animate-fade-in">
-      {/* Dimmed Blurred Backdrop with Spotlight Effect */}
-      <div
-        onClick={onClose}
-        className="fixed inset-0 bg-slate-950/85 backdrop-blur-md transition-opacity"
-      />
+    <div className="fixed inset-0 z-50 pointer-events-auto">
+      {/* 1. SVG Cutout Mask Backdrop */}
+      <svg className="fixed inset-0 w-full h-full pointer-events-auto">
+        <defs>
+          <mask id="tour-spotlight-cutout">
+            <rect width="100%" height="100%" fill="white" />
+            {targetRect && (
+              <rect
+                x={Math.max(0, targetRect.left - pad)}
+                y={Math.max(0, targetRect.top - pad)}
+                width={targetRect.width + pad * 2}
+                height={targetRect.height + pad * 2}
+                rx="10"
+                fill="black"
+              />
+            )}
+          </mask>
+        </defs>
+        <rect
+          width="100%"
+          height="100%"
+          fill="rgba(5, 9, 20, 0.78)"
+          mask="url(#tour-spotlight-cutout)"
+          onClick={onClose}
+        />
+      </svg>
 
-      {/* Floating Tour Card */}
-      <div className="relative z-10 w-full max-w-2xl bg-gradient-to-b from-slate-900/98 via-[#0c1222]/98 to-[#090e1a]/98 border border-blue-500/35 rounded-2xl shadow-2xl shadow-blue-500/10 backdrop-blur-2xl overflow-hidden flex flex-col max-h-[92vh]">
-        
-        {/* Glowing Top Progress Bar */}
-        <div className="w-full h-1 bg-slate-800">
+      {/* 2. Pulsing Neon Highlight Ring around the Target */}
+      {targetRect && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${targetRect.left - pad}px`,
+            top: `${targetRect.top - pad}px`,
+            width: `${targetRect.width + pad * 2}px`,
+            height: `${targetRect.height + pad * 2}px`,
+            pointerEvents: 'none',
+          }}
+          className="border-2 border-cyan-400/90 rounded-xl shadow-[0_0_25px_rgba(34,211,238,0.55)] transition-all duration-200 z-50"
+        >
+          {/* Animated corner accents */}
+          <span className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping" />
+          <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping" />
+        </div>
+      )}
+
+      {/* 3. Floating Callout Dialog Box with Pointer Arrow */}
+      <div
+        ref={popoverRef}
+        style={{
+          position: 'fixed',
+          top: `${popoverPos.top}px`,
+          left: `${popoverPos.left}px`,
+          width: '380px',
+          maxWidth: 'calc(100vw - 32px)',
+        }}
+        className="z-50 bg-gradient-to-b from-[#0f172a] via-[#0c1222] to-[#070b14] border border-cyan-500/40 rounded-2xl shadow-2xl shadow-cyan-950/40 backdrop-blur-2xl text-slate-100 overflow-visible transition-all duration-200 animate-fade-in"
+      >
+        {/* Directional Pointer Arrow */}
+        {targetRect && (
+          <>
+            {popoverPos.placement === 'bottom' && (
+              <div
+                style={{ left: `${arrowOffset}px` }}
+                className="absolute -top-2 w-4 h-4 bg-[#0f172a] border-t border-l border-cyan-500/40 transform rotate-45 -translate-x-1/2 shadow-sm"
+              />
+            )}
+            {popoverPos.placement === 'top' && (
+              <div
+                style={{ left: `${arrowOffset}px` }}
+                className="absolute -bottom-2 w-4 h-4 bg-[#070b14] border-b border-r border-cyan-500/40 transform rotate-45 -translate-x-1/2 shadow-sm"
+              />
+            )}
+            {popoverPos.placement === 'right' && (
+              <div
+                style={{ top: `${arrowOffset}px` }}
+                className="absolute -left-2 w-4 h-4 bg-[#0c1222] border-b border-l border-cyan-500/40 transform rotate-45 -translate-y-1/2 shadow-sm"
+              />
+            )}
+            {popoverPos.placement === 'left' && (
+              <div
+                style={{ top: `${arrowOffset}px` }}
+                className="absolute -right-2 w-4 h-4 bg-[#0c1222] border-t border-r border-cyan-500/40 transform rotate-45 -translate-y-1/2 shadow-sm"
+              />
+            )}
+          </>
+        )}
+
+        {/* Glowing Top Micro-Progress Bar */}
+        <div className="w-full h-1 bg-slate-800 rounded-t-2xl overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-400 transition-all duration-300"
+            className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-400 transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
-        {/* Top Header & Tour Mode Switcher */}
-        <div className="px-5 sm:px-6 py-3.5 border-b border-slate-800/80 bg-slate-900/60 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div
-              className={`p-2 rounded-lg text-white shadow-md shrink-0 ${
-                isMaster
-                  ? 'bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/20'
-                  : 'bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-500/20'
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-bold font-mono tracking-wider uppercase text-slate-200 truncate">
-                  {isMaster ? 'Master System Tour' : (TAB_TOURS[activeTab]?.title || 'Tab Guide')}
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase font-mono ${
-                    isMaster
-                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                      : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                  }`}
-                >
-                  Step {currentStep + 1} of {totalSteps}
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                <span>{progressPercent}% Complete</span>
-                <span>•</span>
-                <span className="text-slate-500 hidden sm:inline">Use [←] [→] or [ESC]</span>
-              </div>
-            </div>
+        {/* Card Header */}
+        <div className="px-5 pt-4 pb-2.5 flex items-center justify-between border-b border-slate-800/80">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono uppercase bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+              STEP {currentStep + 1} OF {totalSteps}
+            </span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate max-w-[170px]">
+              {currentData.badge || (isMaster ? 'MASTER TOUR' : activeTab.toUpperCase())}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Quick Mode Toggle */}
+          <div className="flex items-center gap-1">
             <button
               onClick={() => toggleMode(isMaster ? 'tab' : 'master')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition-all cursor-pointer"
-              title={isMaster ? 'Switch to contextual tab guide' : 'Switch to full master tour'}
+              className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors cursor-pointer"
+              title={isMaster ? 'Switch to contextual tab guide' : 'Switch to full 11-stage master tour'}
             >
-              <Compass className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden sm:inline font-semibold">
-                {isMaster ? 'Active Tab Guide' : 'Master Tour'}
-              </span>
+              <Compass className="w-3.5 h-3.5" />
             </button>
-
-            {/* Close Button */}
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Close Tour (Esc)"
+              className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Close Walkthrough (Esc)"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Scrollable Step Content Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 scrollbar-thin">
-          
-          {/* Step Badge & Heading */}
-          <div>
-            <span className="text-[10px] sm:text-[11px] font-bold font-mono uppercase tracking-wider text-blue-400">
-              {currentData?.badge || `STEP ${currentStep + 1}`}
-            </span>
-            <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight mt-0.5 font-heading">
-              {currentData?.title}
-            </h2>
-            {currentData?.summary && (
-              <p className="text-xs sm:text-sm font-medium text-slate-300 mt-1 leading-snug">
-                {currentData.summary}
-              </p>
-            )}
-          </div>
+        {/* Card Body */}
+        <div className="px-5 py-4 space-y-3">
+          <h3 className="text-base font-bold text-white tracking-tight leading-snug">
+            {currentData.title}
+          </h3>
 
-          {/* Main Description Box */}
-          <div className="text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3.5 sm:p-4 rounded-xl border border-slate-800/80 shadow-inner">
-            {currentData?.description}
-          </div>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            {currentData.description}
+          </p>
 
-          {/* Key Points Bullet List (if present in step) */}
-          {currentData?.keyPoints && (
-            <div className="space-y-2">
-              <div className="text-xs font-bold text-slate-400 tracking-wider uppercase font-mono flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Core Architectural Features & Rules</span>
-              </div>
-              <div className="grid grid-cols-1 gap-1.5 sm:gap-2">
-                {currentData.keyPoints.map((pt, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start gap-2 text-xs text-slate-300 bg-slate-800/40 p-2 sm:p-2.5 rounded-lg border border-slate-700/40"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
-                    <span>{pt}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Operational Tip / Formula Box */}
+          {currentData.tip && (
+            <div className="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-800/40 text-xs text-cyan-200 flex items-start gap-2">
+              <Lightbulb className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+              <span className="leading-snug">{currentData.tip}</span>
             </div>
           )}
-
-          {/* Operator Tip (for Tab Guides) */}
-          {currentData?.tip && (
-            <div className="flex items-start gap-2.5 p-3 sm:p-3.5 bg-blue-950/30 border border-blue-800/40 rounded-xl text-xs text-blue-200">
-              <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold text-blue-300">Operator Tip: </span>
-                <span>{currentData.tip}</span>
-              </div>
-            </div>
-          )}
-
-          {/* ============================================================== */}
-          {/* INTERACTIVE PLAY SIMULATIONS FOR CORE ERP SUBSYSTEMS           */}
-          {/* ============================================================== */}
-
-          {/* 1. SALES SIMULATION (Master Tour Step 2 or Sales Tab Guide) */}
-          {((isMaster && currentData?.id === 'master-sales') || (!isMaster && activeTab === 'sales')) && (
-            <div className="p-4 bg-gradient-to-br from-indigo-950/40 to-slate-900/80 border border-indigo-500/35 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-indigo-300 font-mono uppercase">
-                  <Calculator className="w-4 h-4 text-indigo-400" />
-                  <span>Interactive Play Simulation: Test Live Profit Math</span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-mono">Zero-Drift Preview</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="text-slate-400 text-[11px] font-medium">Units Sold (Quantity):</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={simQty}
-                    onChange={(e) => setSimQty(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:border-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 text-[11px] font-medium">Selling Price ($ / unit):</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={simPrice}
-                    onChange={(e) => setSimPrice(Math.max(1, parseFloat(e.target.value) || 1))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:border-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-              <div className="p-2.5 bg-slate-900/90 rounded-lg border border-indigo-500/20 grid grid-cols-4 gap-2 text-center text-xs font-mono">
-                <div>
-                  <div className="text-[10px] text-slate-400">Revenue</div>
-                  <div className="font-bold text-white">${simRevenue.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-400">COGS (@$14.50)</div>
-                  <div className="font-bold text-slate-300">${simCogs.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-400">Gross Profit</div>
-                  <div className="font-bold text-emerald-400">${simProfit.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-slate-400">Margin %</div>
-                  <div className="font-bold text-indigo-300">{simMargin}%</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 2. STOCK BALANCE SIMULATION (Master Tour Step 3 or Stock Tab Guide) */}
-          {((isMaster && currentData?.id === 'master-stock') || (!isMaster && activeTab === 'stock')) && (
-            <div className="p-4 bg-gradient-to-br from-blue-950/30 to-slate-900/80 border border-blue-500/30 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-blue-300 font-mono uppercase">
-                  <Sliders className="w-4 h-4 text-blue-400" />
-                  <span>Interactive Stock Equation & Dynamic Health Status</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border font-mono ${stockHealthClass}`}>
-                  {stockHealth} ({simUsableStock} units)
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2.5 text-xs">
-                <div>
-                  <label className="text-slate-400 text-[11px]">Factory Inward:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={simInward}
-                    onChange={(e) => setSimInward(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-xs focus:border-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 text-[11px]">Dispatched:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={simDispatched}
-                    onChange={(e) => setSimDispatched(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-xs focus:border-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 text-[11px]">Restocked:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={simRestocked}
-                    onChange={(e) => setSimRestocked(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white font-mono text-xs focus:border-blue-500 outline-none"
-                  />
-                </div>
-              </div>
-              <div className="p-2 bg-slate-950/90 rounded border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
-                <span>Formula: Inward ({simInward}) - Dispatched ({simDispatched}) + Restocked ({simRestocked})</span>
-                <span className="text-emerald-400 font-bold">= {simUsableStock} Usable Units</span>
-              </div>
-            </div>
-          )}
-
-          {/* 3. RTO 3-STAGE PIPELINE SIMULATION (Master Tour Step 4 or RTO Tab Guide) */}
-          {((isMaster && currentData?.id === 'master-rto') || (!isMaster && activeTab === 'rto')) && (
-            <div className="p-4 bg-gradient-to-br from-amber-950/25 to-slate-900/80 border border-amber-500/30 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-amber-300 font-mono uppercase">
-                  <RotateCcw className="w-4 h-4 text-amber-400" />
-                  <span>Interactive 3-Stage Reverse Logistics Pipeline</span>
-                </div>
-                <span className="text-[10px] text-slate-400">Click a stage to simulate</span>
-              </div>
-
-              {/* Interactive Stage Selector Buttons */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  onClick={() => setRtoStage('transit')}
-                  className={`p-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer border ${
-                    rtoStage === 'transit'
-                      ? 'bg-amber-500/20 border-amber-500 text-amber-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Stage 1</div>
-                  <div className="text-xs">In-Transit</div>
-                </button>
-
-                <button
-                  onClick={() => setRtoStage('dock')}
-                  className={`p-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer border ${
-                    rtoStage === 'dock'
-                      ? 'bg-blue-500/20 border-blue-500 text-blue-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Stage 2</div>
-                  <div className="text-xs">Dock Quarantine</div>
-                </button>
-
-                <button
-                  onClick={() => setRtoStage('restocked')}
-                  className={`p-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer border ${
-                    rtoStage === 'restocked'
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Stage 3a</div>
-                  <div className="text-xs">Restocked (+1)</div>
-                </button>
-
-                <button
-                  onClick={() => setRtoStage('damaged')}
-                  className={`p-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer border ${
-                    rtoStage === 'damaged'
-                      ? 'bg-rose-500/20 border-rose-500 text-rose-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Stage 3b</div>
-                  <div className="text-xs">Damaged Loss</div>
-                </button>
-              </div>
-
-              {/* Dynamic State Description */}
-              <div className="p-3 bg-slate-900/90 rounded-lg border border-slate-800 text-xs text-slate-300">
-                {rtoStage === 'transit' && (
-                  <p>🚚 <strong>Stage 1 (IN_TRANSIT):</strong> Delivery failed. Parcel is traveling in courier vans. Sellable stock is unaffected.</p>
-                )}
-                {rtoStage === 'dock' && (
-                  <p>🛡️ <strong>Stage 2 (RECEIVED):</strong> Box is held in warehouse intake quarantine. <em>It cannot be sold until staff inspects condition.</em></p>
-                )}
-                {rtoStage === 'restocked' && (
-                  <p>✅ <strong>Stage 3a (RESTOCKED):</strong> Condition is pristine. 1-click adds +1 to active sellable stock immediately.</p>
-                )}
-                {rtoStage === 'damaged' && (
-                  <p>❌ <strong>Stage 3b (DAMAGED):</strong> Parcel was crushed in transit. Absorbed as inventory loss; <em>never touches active stock.</em></p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 4. BLENDED ROAS SIMULATION (Master Tour Step 8 or Ads Tab Guide) */}
-          {((isMaster && currentData?.id === 'master-ads') || (!isMaster && activeTab === 'ads')) && (
-            <div className="p-4 bg-gradient-to-br from-purple-950/30 to-slate-900/80 border border-purple-500/30 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-purple-300 font-mono uppercase">
-                  <Megaphone className="w-4 h-4 text-purple-400" />
-                  <span>Interactive ROAS Benchmark & Scaling Tier</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border font-mono ${roasTierBadge}`}>
-                  {roasTier} ({simRoas}x)
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="text-slate-400 text-[11px]">Total Ad Spend ($):</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={simAdSpend}
-                    onChange={(e) => setSimAdSpend(Math.max(1, parseFloat(e.target.value) || 1))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:border-purple-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 text-[11px]">Dispatched Revenue ($):</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={simAdRev}
-                    onChange={(e) => setSimAdRev(Math.max(1, parseFloat(e.target.value) || 1))}
-                    className="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:border-purple-500 outline-none"
-                  />
-                </div>
-              </div>
-              <div className="p-2.5 bg-slate-950/90 rounded border border-purple-500/20 text-xs font-mono flex items-center justify-between text-slate-300">
-                <span>Blended ROAS: ${simAdRev} / ${simAdSpend} = <strong className="text-white">{simRoas}x</strong></span>
-                <span className="text-purple-300 text-[11px] font-sans font-medium">{roasGuidance}</span>
-              </div>
-            </div>
-          )}
-
-          {/* 5. CUSTOMER RETURNS QC SIMULATION (Master Tour Step 5 or Returns Tab Guide) */}
-          {((isMaster && currentData?.id === 'master-returns') || (!isMaster && activeTab === 'returns')) && (
-            <div className="p-4 bg-gradient-to-br from-rose-950/20 to-slate-900/80 border border-rose-500/30 rounded-xl space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-bold text-rose-300 font-mono uppercase">
-                  <Undo2 className="w-4 h-4 text-rose-400" />
-                  <span>Interactive QC Grading & Decision Hub</span>
-                </div>
-                <span className="text-[10px] text-slate-400">Select physical QC grade</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  onClick={() => setQcGrade('gradeA')}
-                  className={`p-2 rounded-lg text-xs text-left cursor-pointer border ${
-                    qcGrade === 'gradeA'
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Grade A</div>
-                  <div className="text-xs">Pristine</div>
-                </button>
-                <button
-                  onClick={() => setQcGrade('gradeB')}
-                  className={`p-2 rounded-lg text-xs text-left cursor-pointer border ${
-                    qcGrade === 'gradeB'
-                      ? 'bg-amber-500/20 border-amber-500 text-amber-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Grade B</div>
-                  <div className="text-xs">Packaging Defect</div>
-                </button>
-                <button
-                  onClick={() => setQcGrade('damaged')}
-                  className={`p-2 rounded-lg text-xs text-left cursor-pointer border ${
-                    qcGrade === 'damaged'
-                      ? 'bg-rose-500/20 border-rose-500 text-rose-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Damaged</div>
-                  <div className="text-xs">Defect / Wear</div>
-                </button>
-                <button
-                  onClick={() => setQcGrade('dispute')}
-                  className={`p-2 rounded-lg text-xs text-left cursor-pointer border ${
-                    qcGrade === 'dispute'
-                      ? 'bg-purple-500/20 border-purple-500 text-purple-200 font-bold'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-400'
-                  }`}
-                >
-                  <div className="text-[10px] uppercase font-mono">Dispute</div>
-                  <div className="text-xs">Missing Parcel</div>
-                </button>
-              </div>
-              <div className="p-2.5 bg-slate-950/90 rounded border border-slate-800 text-xs text-slate-300">
-                {qcGrade === 'gradeA' && '✨ Grade A: Tags intact, unworn. Approved for 1-click restocking into active sellable stock.'}
-                {qcGrade === 'gradeB' && '📦 Grade B: Packaging torn, garment pristine. Sent to re-bagging station for discounted channel sale.'}
-                {qcGrade === 'damaged' && '⚠️ Damaged: Defective fabric or stain. Written off to Return Loss ledger; zero stock recovery.'}
-                {qcGrade === 'dispute' && '🔍 Dispute: Customer claims return handed over but courier parcel empty. Flagged for investigation.'}
-              </div>
-            </div>
-          )}
-
         </div>
 
-        {/* Bottom Navigation Controls & Step Dots */}
-        <div className="px-5 sm:px-6 py-3.5 border-t border-slate-800/80 bg-slate-900/60 flex items-center justify-between gap-2 sm:gap-3">
-          
-          {/* Back Button */}
-          <button
-            onClick={handlePrev}
-            disabled={currentStep === 0}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Previous</span>
-          </button>
-
-          {/* Clickable Progress Indicator Dots */}
-          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto max-w-[200px] sm:max-w-none py-1">
-            {steps.map((_, idx) => (
-              <button
+        {/* Card Footer with Controls */}
+        <div className="px-5 py-3 bg-slate-900/60 border-t border-slate-800/80 rounded-b-2xl flex items-center justify-between gap-2">
+          {/* Progress dots */}
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(totalSteps, 11) }).map((_, idx) => (
+              <span
                 key={idx}
-                onClick={() => jumpToStep(idx)}
-                className={`transition-all rounded-full cursor-pointer shrink-0 ${
+                className={`h-1.5 rounded-full transition-all ${
                   idx === currentStep
-                    ? 'w-6 h-2 bg-blue-500 shadow-sm shadow-blue-500/50'
-                    : 'w-2 h-2 bg-slate-700 hover:bg-slate-500'
+                    ? 'w-4 bg-cyan-400'
+                    : idx < currentStep
+                    ? 'w-1.5 bg-slate-600'
+                    : 'w-1.5 bg-slate-800'
                 }`}
-                title={`Jump to step ${idx + 1}`}
               />
             ))}
           </div>
 
-          {/* Next / Finish Button */}
-          <button
-            onClick={handleNext}
-            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-600/25 transition-all cursor-pointer"
-          >
-            <span>{currentStep === totalSteps - 1 ? 'Finish Tour' : 'Next Step'}</span>
-            {currentStep === totalSteps - 1 ? (
-              <CheckCircle2 className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )}
-          </button>
-        </div>
+          {/* Nav buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrev}
+              disabled={currentStep === 0}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer flex items-center gap-1"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
 
+            <button
+              onClick={handleNext}
+              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-md shadow-cyan-500/20 transition-all cursor-pointer flex items-center gap-1"
+            >
+              <span>{currentStep === totalSteps - 1 ? 'Finish' : 'Next'}</span>
+              {currentStep === totalSteps - 1 ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

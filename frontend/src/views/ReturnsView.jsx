@@ -172,9 +172,9 @@ export default function ReturnsView() {
   return (
     <div className="space-y-4">
       {/* Top Filter Bar */}
-      <div className="glass-panel p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="glass-panel p-4 flex flex-col md:flex-row items-center justify-between gap-3" data-tour="returns-hud">
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-64" data-tour="returns-search">
             <label htmlFor="returns-search-input" className="sr-only">Search returns</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
@@ -189,7 +189,7 @@ export default function ReturnsView() {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" data-tour="returns-status-filter">
             {['ALL', 'In Transit', 'Received', 'Restocked', 'Damaged'].map((st) => (
               <button
                 key={st}
@@ -212,21 +212,24 @@ export default function ReturnsView() {
               onClick={handleBulkRestock}
               className="btn btn-success text-xs px-3.5 h-9"
               title="Restock all received return units back into inventory"
+              data-tour="returns-bulk-restock"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Bulk Restock Dock ({holdingCount})</span>
             </button>
           )}
 
-          <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9">
-            <Download className="w-3.5 h-3.5" />
-            <span>Excel</span>
-          </button>
-          <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9">
-            <Download className="w-3.5 h-3.5" />
-            <span>CSV</span>
-          </button>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9">
+          <div className="flex items-center gap-2" data-tour="returns-export">
+            <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9">
+              <Download className="w-3.5 h-3.5" />
+              <span>Excel</span>
+            </button>
+            <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9">
+              <Download className="w-3.5 h-3.5" />
+              <span>CSV</span>
+            </button>
+          </div>
+          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9" data-tour="returns-add-btn">
             <Plus className="w-3.5 h-3.5" />
             <span>Log Return</span>
           </button>
@@ -234,24 +237,24 @@ export default function ReturnsView() {
       </div>
 
       {/* Returns Table */}
-      <div className="glass-panel overflow-hidden border border-slate-800">
+      <div className="glass-panel overflow-hidden border border-slate-800" data-tour="returns-table">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="py-3 px-3 text-center">Sl. No.</th>
                 <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Style SKU</th>
+                <th className="py-3 px-4" data-tour="returns-col-sku">Style SKU</th>
                 <th className="py-3 px-4 text-center">Qty</th>
                 <th className="py-3 px-4 text-right">Refund Amount</th>
                 <th className="py-3 px-4 text-right">Reverse Fee</th>
-                <th className="py-3 px-4">Primary Reason</th>
+                <th className="py-3 px-4" data-tour="returns-col-reason">Primary Reason</th>
                 <th className="py-3 px-4">Reverse AWB</th>
-                <th className="py-3 px-4 text-center">Status</th>
+                <th className="py-3 px-4 text-center" data-tour="returns-col-status">Status</th>
                 <th className="py-3 px-4 text-center">Date Received</th>
                 <th className="py-3 px-4 text-center">Date Restocked</th>
-                <th className="py-3 px-4 text-center">Dock Operations</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <th className="py-3 px-4 text-center" data-tour="returns-col-dock">Dock Operations</th>
+                <th className="py-3 px-4 text-center" data-tour="returns-col-actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

@@ -70,8 +70,8 @@ export default function AdsView() {
     <div className="space-y-4">
 
       {/* Control Bar */}
-      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-64">
+      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3" data-tour="ads-hud">
+        <div className="relative w-full sm:w-64" data-tour="ads-search">
           <label htmlFor="ads-search-input" className="sr-only">Search campaign or platform</label>
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
           <input
@@ -90,11 +90,12 @@ export default function AdsView() {
           <button
             onClick={() => exportToExcel(filtered, `Ad_Spend_${new Date().toISOString().split('T')[0]}.xlsx`, 'Ad Spend')}
             className="btn btn-outline text-xs px-3 h-9"
+            data-tour="ads-export"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Excel</span>
           </button>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9">
+          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9" data-tour="ads-add-btn">
             <Plus className="w-3.5 h-3.5" />
             <span>Log Ad Spend</span>
           </button>
@@ -102,17 +103,17 @@ export default function AdsView() {
       </div>
 
       {/* Table */}
-      <div className="glass-panel overflow-hidden border border-white/10">
+      <div className="glass-panel overflow-hidden border border-white/10" data-tour="ads-table">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-white/10">
               <tr>
                 <th className="py-3 px-4 text-center">Sl. No.</th>
                 <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Platform Channel</th>
-                <th className="py-3 px-4 text-right">Amount ($)</th>
-                <th className="py-3 px-4">Campaign Notes</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <th className="py-3 px-4" data-tour="ads-col-platform">Platform Channel</th>
+                <th className="py-3 px-4 text-right" data-tour="ads-col-amount">Amount ($)</th>
+                <th className="py-3 px-4" data-tour="ads-col-notes">Campaign Notes</th>
+                <th className="py-3 px-4 text-center" data-tour="ads-col-actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">

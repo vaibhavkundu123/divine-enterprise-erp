@@ -64,7 +64,7 @@ export default function SalesView({ onRecordSaleClick }) {
       {/* Top Controls Bar */}
       <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-72" data-tour="sales-search">
             <label htmlFor="sales-search-input" className="sr-only">Search sales orders</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
@@ -81,15 +81,22 @@ export default function SalesView({ onRecordSaleClick }) {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9">
-            <Download className="w-3.5 h-3.5" />
-            <span>Excel</span>
-          </button>
-          <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9">
-            <Download className="w-3.5 h-3.5" />
-            <span>CSV</span>
-          </button>
-          <button onClick={onRecordSaleClick} className="btn btn-primary text-xs px-3.5 h-9">
+          <div className="flex items-center gap-2" data-tour="sales-export">
+            <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9" title="Export to Excel">
+              <Download className="w-3.5 h-3.5" />
+              <span>Excel</span>
+            </button>
+            <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9" title="Export to CSV">
+              <Download className="w-3.5 h-3.5" />
+              <span>CSV</span>
+            </button>
+          </div>
+          <button
+            onClick={onRecordSaleClick}
+            className="btn btn-primary text-xs px-3.5 h-9"
+            data-tour="sales-new-btn"
+            title="Fast Record Sale (Alt+S)"
+          >
             <Plus className="w-3.5 h-3.5" />
             <span>New Sale</span>
           </button>
@@ -97,22 +104,22 @@ export default function SalesView({ onRecordSaleClick }) {
       </div>
 
       {/* Orders Table */}
-      <div className="glass-panel overflow-hidden border border-slate-800">
+      <div className="glass-panel overflow-hidden border border-slate-800" data-tour="sales-table">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="py-3 px-4">#</th>
                 <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Style SKU</th>
+                <th className="py-3 px-4" data-tour="sales-col-sku">Style SKU</th>
                 <th className="py-3 px-4 text-center">Qty</th>
                 <th className="py-3 px-4 text-right">Selling Price</th>
-                <th className="py-3 px-4 text-right">Total Revenue</th>
-                <th className="py-3 px-4 text-right">COGS</th>
-                <th className="py-3 px-4 text-right">Gross Profit</th>
-                <th className="py-3 px-4 text-right">Margin %</th>
-                <th className="py-3 px-4">Reference</th>
-                <th className="py-3 px-4 text-center">Actions</th>
+                <th className="py-3 px-4 text-right" data-tour="sales-col-revenue">Total Revenue</th>
+                <th className="py-3 px-4 text-right" data-tour="sales-col-cogs">COGS</th>
+                <th className="py-3 px-4 text-right" data-tour="sales-col-profit">Gross Profit</th>
+                <th className="py-3 px-4 text-right" data-tour="sales-col-margin">Margin %</th>
+                <th className="py-3 px-4" data-tour="sales-col-ref">Reference</th>
+                <th className="py-3 px-4 text-center" data-tour="sales-col-actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -125,7 +132,7 @@ export default function SalesView({ onRecordSaleClick }) {
                   <td colSpan="11" className="py-8 text-center text-slate-400">No sales records found.</td>
                 </tr>
               ) : (
-                filtered.map((s) => {
+                filtered.map((s, idx) => {
                   const marginPct = (s.profit_margin * 100).toFixed(1);
                   return (
                     <tr key={s.id} className="hover:bg-white/5 transition-colors">
@@ -135,11 +142,22 @@ export default function SalesView({ onRecordSaleClick }) {
                       <td className="py-3 px-4 text-center font-semibold text-white">{s.quantity_sold}</td>
                       <td className="py-3 px-4 text-right">{formatCurrency(s.selling_price)}</td>
                       <td className="py-3 px-4 text-right font-semibold text-white">{formatCurrency(s.total_revenue)}</td>
-                      <td className="py-3 px-4 text-right text-rose-300">{formatCurrency(s.cogs)}</td>
-                      <td className={`py-3 px-4 text-right font-bold ${s.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <td
+                        data-tour={idx === 0 ? "sales-sample-cogs" : undefined}
+                        className="py-3 px-4 text-right text-rose-300 font-mono"
+                      >
+                        {formatCurrency(s.cogs)}
+                      </td>
+                      <td
+                        data-tour={idx === 0 ? "sales-sample-profit" : undefined}
+                        className={`py-3 px-4 text-right font-bold ${s.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}
+                      >
                         {formatCurrency(s.profit)}
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td
+                        data-tour={idx === 0 ? "sales-sample-margin" : undefined}
+                        className="py-3 px-4 text-right"
+                      >
                         <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                           s.profit >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
                         }`}>
@@ -151,15 +169,15 @@ export default function SalesView({ onRecordSaleClick }) {
                         <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => setEditingOrder(s)}
-                            className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+                            className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors cursor-pointer"
                             title="Edit Order"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(s.id)}
-                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-                            title="Delete Order"
+                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Delete Order (Restores Stock)"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
