@@ -346,113 +346,13 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* 4. Asymmetric Bento Section: 65% Financial Waveform vs 35% Logistics Health */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Bento: Financial Trends Chart (8 columns on lg) */}
-        <div className="lg:col-span-8">
-          <TrendWaveforms
-            waveforms={waveforms}
-            horizon={horizon}
-            onHorizonChange={onHorizonChange}
-          />
-        </div>
-
-        {/* Right Bento: Reverse Logistics Health & Quick Dock Actions (4 columns on lg) */}
-        <div className="lg:col-span-4 space-y-4">
-          <div className="glass-panel p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </div>
-                <h3 className="font-bold text-sm text-white font-heading">
-                  Reverse Logistics Dock
-                </h3>
-              </div>
-              <span className="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                Live Dock
-              </span>
-            </div>
-
-            {/* Courier RTO Status */}
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2 mb-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                  <RotateCcw className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Courier RTO</span>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/25">
-                  {kpis.rto_holding_units} at Dock
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>RTO Rate: <strong className="text-slate-200">{formatPercent(kpis.rto_rate)}</strong></span>
-                <span>{kpis.rto_units} parcels total</span>
-              </div>
-
-              {kpis.rto_holding_units > 0 && (
-                <button
-                  onClick={onRestockDock}
-                  className="w-full mt-2 btn btn-primary text-xs py-1.5 h-7 font-medium"
-                >
-                  Restock All {kpis.rto_holding_units} Units to Warehouse
-                </button>
-              )}
-            </div>
-
-            {/* Customer Returns Status */}
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2 mb-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                  <Undo2 className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Customer Returns</span>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/25">
-                  {kpis.cr_holding_units} in Triage
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Return Rate: <strong className="text-slate-200">{formatPercent(kpis.cr_rate)}</strong></span>
-                <span>{kpis.cr_units} returns</span>
-              </div>
-
-              {kpis.cr_holding_units > 0 && (
-                <button
-                  onClick={onRestockReturns}
-                  className="w-full mt-2 btn btn-primary text-xs py-1.5 h-7 font-medium"
-                >
-                  Restock All {kpis.cr_holding_units} Units to Warehouse
-                </button>
-              )}
-            </div>
-
-            {/* Exchanges Status */}
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                  <ArrowLeftRight className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Product Exchanges</span>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                  {kpis.exchange_units} Swapped
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Exchange Rate: <strong className="text-slate-200">{formatPercent(kpis.exchange_rate)}</strong></span>
-                <span className="text-emerald-400 text-[11px] font-medium">Re-dispatch OK</span>
-              </div>
-
-              {(kpis.exchange_intake_units > 0 || ((kpis.exchange_units || 0) > (kpis.exchange_restocked_units || 0))) && (
-                <button
-                  onClick={onRestockExchanges}
-                  className="w-full mt-2 btn btn-primary text-xs py-1.5 h-7 font-medium"
-                >
-                  Restock All {kpis.exchange_intake_units || (kpis.exchange_units - (kpis.exchange_restocked_units || 0)) || 1} Units to Warehouse
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* 4. Financial Waveform Intelligence */}
+      <div>
+        <TrendWaveforms
+          waveforms={waveforms}
+          horizon={horizon}
+          onHorizonChange={onHorizonChange}
+        />
       </div>
 
       {/* 5. Quick Summary Widgets Grid (Recent Sales Snapshot & Low Stock Radar) */}
