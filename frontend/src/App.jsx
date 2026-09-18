@@ -13,12 +13,20 @@ import BankView from './views/BankView';
 import AnalyticsView from './views/AnalyticsView';
 import AuditView from './views/AuditView';
 import TasksView from './views/TasksView';
+import StatusView from './views/StatusView';
 import GlobalRecordSaleModal from './modals/GlobalRecordSaleModal';
 import { api } from './services/api';
 import { exportMasterWorkbook } from './utils/exportUtils';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab')) return params.get('tab');
+      if (window.location.pathname.includes('status')) return 'status';
+    } catch (_) {}
+    return 'dashboard';
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [kpis, setKpis] = useState(null);
   const [copilotInsights, setCopilotInsights] = useState([]);
@@ -210,6 +218,8 @@ export default function App() {
           {activeTab === 'analytics' && <AnalyticsView />}
 
           {activeTab === 'audit' && <AuditView />}
+
+          {activeTab === 'status' && <StatusView />}
 
           {activeTab === 'tasks' && <TasksView />}
         </main>

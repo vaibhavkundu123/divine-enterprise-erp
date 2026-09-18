@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Layers,
   Database,
+  ShieldCheck,
   X,
 } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function Sidebar({
         { id: 'dashboard', label: 'Executive Overview', icon: LayoutDashboard },
         { id: 'analytics', label: 'Financial Analytics', icon: TrendingUp },
         { id: 'audit', label: 'Audit Trail & Logs', icon: History },
+        { id: 'status', label: 'System Health & Checks', icon: ShieldCheck, badge: 'Live', badgeColor: 'emerald' },
       ],
     },
     {

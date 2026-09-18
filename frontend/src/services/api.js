@@ -135,4 +135,7 @@ export const api = {
     return request(`/audit${query ? `?${query}` : ''}`);
   },
   clearAudit: () => request('/audit/clear', { method: 'POST' }),
+
+  // System Health & Diagnostics
+  getSystemStatus: () => request('/status'),
 };

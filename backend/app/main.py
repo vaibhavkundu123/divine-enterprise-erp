@@ -20,6 +20,7 @@ from backend.app.api import (
     bank,
     analytics,
     audit,
+    status,
 )
 
 @asynccontextmanager
@@ -53,7 +54,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount 10 API Routers
+# Mount 11 API Routers
 app.include_router(procurement.router)
 app.include_router(sales.router)
 app.include_router(stock.router)
@@ -64,6 +65,8 @@ app.include_router(ads.router)
 app.include_router(bank.router)
 app.include_router(analytics.router)
 app.include_router(audit.router)
+app.include_router(status.router)
+
 
 # Health Check Probe
 @app.get("/health", tags=["Health"])

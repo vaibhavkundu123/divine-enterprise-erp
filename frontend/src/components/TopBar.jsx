@@ -42,6 +42,8 @@ export default function TopBar({
         return 'Financial Analytics & Intelligence';
       case 'audit':
         return 'System Audit Trail & Security';
+      case 'status':
+        return 'System Health & Backend Diagnostics';
       case 'tasks':
         return 'Verified Roadmap & Tasks (38/38)';
       default:
