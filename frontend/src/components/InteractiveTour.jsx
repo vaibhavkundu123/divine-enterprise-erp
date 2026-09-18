@@ -7,6 +7,8 @@ import {
   Compass,
   Lightbulb,
   CheckCircle2,
+  Calculator,
+  Check,
 } from 'lucide-react';
 import { MASTER_TOUR_STEPS, TAB_TOURS } from '../utils/tourSteps';
 
@@ -89,8 +91,8 @@ export default function InteractiveTour({
         setTargetRect(unionRect);
 
         // Position popover relative to unionRect
-        const popoverWidth = 380;
-        const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 240;
+        const popoverWidth = 430;
+        const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 280;
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
         const preferred = currentData.preferredPlacement || 'bottom';
@@ -284,10 +286,10 @@ export default function InteractiveTour({
           position: 'fixed',
           top: `${popoverPos.top}px`,
           left: `${popoverPos.left}px`,
-          width: '380px',
+          width: '430px',
           maxWidth: 'calc(100vw - 32px)',
         }}
-        className="z-50 bg-gradient-to-b from-[#0f172a] via-[#0c1222] to-[#070b14] border border-cyan-500/40 rounded-2xl shadow-2xl shadow-cyan-950/40 backdrop-blur-2xl text-slate-100 overflow-visible transition-all duration-200 animate-fade-in"
+        className="z-50 bg-gradient-to-b from-[#0f172a] via-[#0c1222] to-[#070b14] border border-cyan-500/40 rounded-2xl shadow-2xl shadow-cyan-950/50 backdrop-blur-2xl text-slate-100 overflow-visible transition-all duration-200 animate-fade-in"
       >
         {/* Directional Pointer Arrow */}
         {targetRect && (
@@ -328,17 +330,17 @@ export default function InteractiveTour({
         </div>
 
         {/* Card Header */}
-        <div className="px-5 pt-4 pb-2.5 flex items-center justify-between border-b border-slate-800/80">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono uppercase bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+        <div className="px-5 pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-800/80">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono uppercase bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0">
               STEP {currentStep + 1} OF {totalSteps}
             </span>
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate max-w-[170px]">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">
               {currentData.badge || (isMaster ? 'MASTER TOUR' : activeTab.toUpperCase())}
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => toggleMode(isMaster ? 'tab' : 'master')}
               className="p-1 rounded text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors cursor-pointer"
@@ -356,8 +358,8 @@ export default function InteractiveTour({
           </div>
         </div>
 
-        {/* Card Body */}
-        <div className="px-5 py-4 space-y-3">
+        {/* Card Body with Elaborate Details */}
+        <div className="px-5 py-3.5 space-y-3 max-h-[min(520px,65vh)] overflow-y-auto pr-2 scrollbar-thin">
           <h3 className="text-base font-bold text-white tracking-tight leading-snug">
             {currentData.title}
           </h3>
@@ -366,7 +368,33 @@ export default function InteractiveTour({
             {currentData.description}
           </p>
 
-          {/* Operational Tip / Formula Box */}
+          {/* Structured Key Operational Details */}
+          {currentData.details && currentData.details.length > 0 && (
+            <div className="space-y-1.5 p-3 rounded-xl bg-slate-900/80 border border-slate-800/90 shadow-inner">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 font-mono block mb-1">
+                Operational Mechanics & Architecture
+              </span>
+              {currentData.details.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-xs text-slate-300 leading-relaxed">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 flex-shrink-0" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Mathematical Formula / Identity Box */}
+          {currentData.formula && (
+            <div className="p-2.5 rounded-xl bg-slate-950/90 border border-cyan-800/50 text-xs font-mono text-cyan-200 flex items-start gap-2 shadow-inner">
+              <Calculator className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+              <div className="leading-snug">
+                <span className="text-[10px] uppercase font-bold text-cyan-400 block font-mono">Zero-Drift Formula</span>
+                <span>{currentData.formula}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Operational Tip / Shortcut Box */}
           {currentData.tip && (
             <div className="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-800/40 text-xs text-cyan-200 flex items-start gap-2">
               <Lightbulb className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
