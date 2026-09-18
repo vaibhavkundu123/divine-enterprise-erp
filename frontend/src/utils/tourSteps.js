@@ -93,7 +93,7 @@ export const TAB_TOURS = {
           'Pristine parcels approved for restock immediately increment usable warehouse inventory counts.'
         ],
         tip: 'Click "Courier RTO Returns Dock ➔" to inspect courier AWB tracking numbers and process restocks.',
-        preferredPlacement: 'top'
+        preferredPlacement: 'bottom'
       },
       {
         selector: '[data-tour="dash-strip-returns"]',
@@ -107,7 +107,7 @@ export const TAB_TOURS = {
           'Damaged garments are absorbed as return loss write-offs without polluting active inventory.'
         ],
         tip: 'Click the blue button to open the Customer Returns & QC Grading Hub.',
-        preferredPlacement: 'top'
+        preferredPlacement: 'bottom'
       },
       {
         selector: '[data-tour="dash-strip-exchanges"]',
@@ -121,7 +121,7 @@ export const TAB_TOURS = {
           'Prevents inventory shrinkage by tracking courier reverse fees and net replacement settlements.'
         ],
         tip: 'Click the blue button to view the Exchanges pipeline and clear arrived return items.',
-        preferredPlacement: 'top'
+        preferredPlacement: 'bottom'
       },
       {
         selector: '[data-tour="dash-waveforms"]',

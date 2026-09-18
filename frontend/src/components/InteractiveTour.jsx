@@ -49,7 +49,62 @@ export default function InteractiveTour({
     }
   }, [isMaster, onNavigateTab]);
 
-  // Find target element(s) and compute union bounding rect
+  // Scroll target element into view leaving optimal clearance for the popover
+  const scrollToTarget = useCallback((selector, preferredPlacement) => {
+    try {
+      const el = document.querySelector(selector);
+      if (!el) return;
+
+      // Find actual scrollable ancestor container (e.g. App's main viewport div)
+      let scrollContainer = el.parentElement;
+      while (scrollContainer && scrollContainer !== document.body) {
+        const style = window.getComputedStyle(scrollContainer);
+        const oy = style.overflowY;
+        if ((oy === 'auto' || oy === 'scroll') && scrollContainer.scrollHeight > scrollContainer.clientHeight) {
+          break;
+        }
+        scrollContainer = scrollContainer.parentElement;
+      }
+      if (!scrollContainer || scrollContainer === document.body) {
+        scrollContainer = document.scrollingElement || document.documentElement;
+      }
+
+      const elemRect = el.getBoundingClientRect();
+      const containerRect = (scrollContainer === document.documentElement || scrollContainer === document.body)
+        ? { top: 0, height: window.innerHeight }
+        : scrollContainer.getBoundingClientRect();
+
+      const currentScrollTop = scrollContainer.scrollTop || window.scrollY || 0;
+      const relativeTop = elemRect.top - containerRect.top + currentScrollTop;
+      const elemHeight = elemRect.height;
+      const viewportH = containerRect.height || window.innerHeight;
+      const topBarSafe = 75; // fixed top bar height + breathing room
+
+      let targetScrollTop = currentScrollTop;
+
+      if (preferredPlacement === 'top') {
+        // Element sits in lower portion of viewport so there is maximum clearance (~450-550px) ABOVE
+        const desiredTopInViewport = Math.max(topBarSafe + 180, viewportH - elemHeight - 100);
+        targetScrollTop = relativeTop - desiredTopInViewport;
+      } else {
+        // Preferred 'bottom': Element sits in upper portion so there is maximum clearance (~500-650px) BELOW
+        const desiredTopInViewport = topBarSafe + 16;
+        targetScrollTop = relativeTop - desiredTopInViewport;
+      }
+
+      const maxScroll = Math.max(0, scrollContainer.scrollHeight - viewportH);
+      const clampedScrollTop = Math.max(0, Math.min(targetScrollTop, maxScroll));
+
+      scrollContainer.scrollTo({
+        top: clampedScrollTop,
+        behavior: 'smooth',
+      });
+    } catch (err) {
+      console.warn('Scroll to target error:', err);
+    }
+  }, []);
+
+  // Find target element(s) and compute union bounding rect with strict non-overlap geometry
   const updateTargetPosition = useCallback(() => {
     if (!isOpen || !currentData?.selector) {
       setTargetRect(null);
@@ -63,7 +118,7 @@ export default function InteractiveTour({
         return;
       }
 
-      // Compute bounding box that unions all matching elements (e.g. cluster of columns)
+      // Compute bounding box that unions all matching elements
       let minTop = Infinity;
       let minLeft = Infinity;
       let maxRight = -Infinity;
@@ -79,75 +134,83 @@ export default function InteractiveTour({
         }
       });
 
-      if (minTop !== Infinity) {
-        const unionRect = {
-          top: minTop,
-          left: minLeft,
-          right: maxRight,
-          bottom: maxBottom,
-          width: maxRight - minLeft,
-          height: maxBottom - minTop,
-        };
-        setTargetRect(unionRect);
-
-        // Position popover relative to unionRect
-        const popoverWidth = 430;
-        const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 280;
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-        const preferred = currentData.preferredPlacement || 'bottom';
-
-        let placement = preferred;
-        let top = 0;
-        let left = 0;
-
-        // Space checks
-        const spaceBelow = windowHeight - unionRect.bottom;
-        const spaceAbove = unionRect.top;
-        const spaceRight = windowWidth - unionRect.right;
-        const spaceLeft = unionRect.left;
-
-        if (preferred === 'bottom' && spaceBelow < popoverHeight + 30 && spaceAbove > popoverHeight + 30) {
-          placement = 'top';
-        } else if (preferred === 'top' && spaceAbove < popoverHeight + 30 && spaceBelow > popoverHeight + 30) {
-          placement = 'bottom';
-        } else if (preferred === 'right' && spaceRight < popoverWidth + 30 && spaceLeft > popoverWidth + 30) {
-          placement = 'left';
-        } else if (preferred === 'left' && spaceLeft < popoverWidth + 30 && spaceRight > popoverWidth + 30) {
-          placement = 'right';
-        }
-
-        if (placement === 'bottom') {
-          top = unionRect.bottom + 16;
-          left = unionRect.left + (unionRect.width / 2) - (popoverWidth / 2);
-        } else if (placement === 'top') {
-          top = unionRect.top - popoverHeight - 16;
-          left = unionRect.left + (unionRect.width / 2) - (popoverWidth / 2);
-        } else if (placement === 'right') {
-          top = unionRect.top + (unionRect.height / 2) - (popoverHeight / 2);
-          left = unionRect.right + 16;
-        } else if (placement === 'left') {
-          top = unionRect.top + (unionRect.height / 2) - (popoverHeight / 2);
-          left = unionRect.left - popoverWidth - 16;
-        }
-
-        // Clamp inside viewport
-        const clampedLeft = Math.max(16, Math.min(left, windowWidth - popoverWidth - 16));
-        const clampedTop = Math.max(16, Math.min(top, windowHeight - popoverHeight - 16));
-
-        // Arrow calculation
-        let calculatedArrowOffset = 24;
-        if (placement === 'top' || placement === 'bottom') {
-          const targetCenter = unionRect.left + (unionRect.width / 2);
-          calculatedArrowOffset = Math.max(20, Math.min(targetCenter - clampedLeft, popoverWidth - 24));
-        } else {
-          const targetCenter = unionRect.top + (unionRect.height / 2);
-          calculatedArrowOffset = Math.max(20, Math.min(targetCenter - clampedTop, popoverHeight - 24));
-        }
-
-        setPopoverPos({ top: clampedTop, left: clampedLeft, placement });
-        setArrowOffset(calculatedArrowOffset);
+      if (minTop === Infinity) {
+        setTargetRect(null);
+        return;
       }
+
+      const unionRect = {
+        top: minTop,
+        left: minLeft,
+        right: maxRight,
+        bottom: maxBottom,
+        width: maxRight - minLeft,
+        height: maxBottom - minTop,
+      };
+      setTargetRect(unionRect);
+
+      const popoverWidth = 430;
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const topBarSafe = 70; // safe top margin below navbar
+      const gap = 14; // gap between target border and popover
+
+      // Available vertical space in viewport
+      const spaceBelow = windowHeight - unionRect.bottom - 16;
+      const spaceAbove = unionRect.top - topBarSafe - 16;
+
+      const preferred = currentData.preferredPlacement || 'bottom';
+      let placement = preferred;
+
+      // Smart placement selection based on actual real-time space
+      if (preferred === 'bottom') {
+        if (spaceBelow < 260 && spaceAbove > spaceBelow) {
+          placement = 'top';
+        } else {
+          placement = 'bottom';
+        }
+      } else if (preferred === 'top') {
+        if (spaceAbove < 260 && spaceBelow > spaceAbove) {
+          placement = 'bottom';
+        } else {
+          placement = 'top';
+        }
+      } else {
+        placement = spaceBelow >= spaceAbove ? 'bottom' : 'top';
+      }
+
+      let top = 0;
+      let maxHeight = 520;
+
+      if (placement === 'bottom') {
+        // STRICT INVARIANT: top is strictly below the target's bottom edge
+        top = unionRect.bottom + gap;
+        // Available space below the popover top
+        maxHeight = Math.max(200, windowHeight - top - 16);
+      } else {
+        // STRICT INVARIANT: popover bottom is strictly above the target's top edge
+        maxHeight = Math.max(200, unionRect.top - gap - topBarSafe);
+        const popoverActualHeight = popoverRef.current
+          ? Math.min(popoverRef.current.offsetHeight, maxHeight)
+          : Math.min(460, maxHeight);
+        top = Math.max(topBarSafe, unionRect.top - gap - popoverActualHeight);
+      }
+
+      // Horizontal alignment: center on the target, clamped inside viewport
+      const targetCenterX = unionRect.left + (unionRect.width / 2);
+      const idealLeft = targetCenterX - (popoverWidth / 2);
+      const clampedLeft = Math.max(16, Math.min(idealLeft, windowWidth - popoverWidth - 16));
+
+      // Arrow offset along the popover edge, clamped safely inside rounded corners
+      const calculatedArrowOffset = Math.max(28, Math.min(targetCenterX - clampedLeft, popoverWidth - 28));
+
+      setPopoverPos({
+        top,
+        left: clampedLeft,
+        maxHeight,
+        placement,
+      });
+      setArrowOffset(calculatedArrowOffset);
     } catch (err) {
       console.warn('Tour target error:', err);
     }
@@ -157,21 +220,21 @@ export default function InteractiveTour({
   useEffect(() => {
     if (!isOpen || !currentData?.selector) return;
 
-    // Small delay to allow tab transitions or DOM renders
-    const scrollTimer = setTimeout(() => {
-      try {
-        const el = document.querySelector(currentData.selector);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-        }
-      } catch (e) {
-        // ignore invalid selector
-      }
-      updateTargetPosition();
-    }, 120);
+    const preferred = currentData.preferredPlacement || 'bottom';
+    scrollToTarget(currentData.selector, preferred);
 
-    return () => clearTimeout(scrollTimer);
-  }, [isOpen, currentStep, mode, activeTab, currentData, updateTargetPosition]);
+    // Initial update plus scheduled syncs during smooth scroll
+    updateTargetPosition();
+    const t1 = setTimeout(updateTargetPosition, 80);
+    const t2 = setTimeout(updateTargetPosition, 200);
+    const t3 = setTimeout(updateTargetPosition, 400);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isOpen, currentStep, mode, activeTab, currentData, scrollToTarget, updateTargetPosition]);
 
   // Window listeners for continuous alignment
   useEffect(() => {
@@ -288,8 +351,11 @@ export default function InteractiveTour({
           left: `${popoverPos.left}px`,
           width: '430px',
           maxWidth: 'calc(100vw - 32px)',
+          maxHeight: popoverPos.maxHeight ? `${popoverPos.maxHeight}px` : '540px',
+          display: 'flex',
+          flexDirection: 'column',
         }}
-        className="z-50 bg-gradient-to-b from-[#0f172a] via-[#0c1222] to-[#070b14] border border-cyan-500/40 rounded-2xl shadow-2xl shadow-cyan-950/50 backdrop-blur-2xl text-slate-100 overflow-visible transition-all duration-200 animate-fade-in"
+        className="z-50 bg-gradient-to-b from-[#0f172a] via-[#0c1222] to-[#070b14] border border-cyan-500/40 rounded-2xl shadow-2xl shadow-cyan-950/50 backdrop-blur-2xl text-slate-100 overflow-visible transition-all duration-150 animate-fade-in"
       >
         {/* Directional Pointer Arrow */}
         {targetRect && (
@@ -297,32 +363,32 @@ export default function InteractiveTour({
             {popoverPos.placement === 'bottom' && (
               <div
                 style={{ left: `${arrowOffset}px` }}
-                className="absolute -top-2 w-4 h-4 bg-[#0f172a] border-t border-l border-cyan-500/40 transform rotate-45 -translate-x-1/2 shadow-sm"
+                className="absolute -top-2 w-4 h-4 bg-[#0f172a] border-t border-l border-cyan-500/40 transform rotate-45 -translate-x-1/2 shadow-sm pointer-events-none"
               />
             )}
             {popoverPos.placement === 'top' && (
               <div
                 style={{ left: `${arrowOffset}px` }}
-                className="absolute -bottom-2 w-4 h-4 bg-[#070b14] border-b border-r border-cyan-500/40 transform rotate-45 -translate-x-1/2 shadow-sm"
+                className="absolute -bottom-2 w-4 h-4 bg-[#070b14] border-b border-r border-cyan-500/40 transform rotate-45 -translate-x-1/2 shadow-sm pointer-events-none"
               />
             )}
             {popoverPos.placement === 'right' && (
               <div
                 style={{ top: `${arrowOffset}px` }}
-                className="absolute -left-2 w-4 h-4 bg-[#0c1222] border-b border-l border-cyan-500/40 transform rotate-45 -translate-y-1/2 shadow-sm"
+                className="absolute -left-2 w-4 h-4 bg-[#0c1222] border-b border-l border-cyan-500/40 transform rotate-45 -translate-y-1/2 shadow-sm pointer-events-none"
               />
             )}
             {popoverPos.placement === 'left' && (
               <div
                 style={{ top: `${arrowOffset}px` }}
-                className="absolute -right-2 w-4 h-4 bg-[#0c1222] border-t border-r border-cyan-500/40 transform rotate-45 -translate-y-1/2 shadow-sm"
+                className="absolute -right-2 w-4 h-4 bg-[#0c1222] border-t border-r border-cyan-500/40 transform rotate-45 -translate-y-1/2 shadow-sm pointer-events-none"
               />
             )}
           </>
         )}
 
         {/* Glowing Top Micro-Progress Bar */}
-        <div className="w-full h-1 bg-slate-800 rounded-t-2xl overflow-hidden">
+        <div className="w-full h-1 bg-slate-800 rounded-t-2xl overflow-hidden shrink-0">
           <div
             className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-400 transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
@@ -330,7 +396,7 @@ export default function InteractiveTour({
         </div>
 
         {/* Card Header */}
-        <div className="px-5 pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-800/80">
+        <div className="px-5 pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-800/80 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold font-mono uppercase bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shrink-0">
               STEP {currentStep + 1} OF {totalSteps}
@@ -359,7 +425,7 @@ export default function InteractiveTour({
         </div>
 
         {/* Card Body with Elaborate Details */}
-        <div className="px-5 py-3.5 space-y-3 max-h-[min(520px,65vh)] overflow-y-auto pr-2 scrollbar-thin">
+        <div className="px-5 py-3.5 space-y-3 flex-1 min-h-0 overflow-y-auto pr-2 scrollbar-thin">
           <h3 className="text-base font-bold text-white tracking-tight leading-snug">
             {currentData.title}
           </h3>
@@ -404,7 +470,7 @@ export default function InteractiveTour({
         </div>
 
         {/* Card Footer with Controls */}
-        <div className="px-5 py-3 bg-slate-900/60 border-t border-slate-800/80 rounded-b-2xl flex items-center justify-between gap-2">
+        <div className="px-5 py-3 bg-slate-900/60 border-t border-slate-800/80 rounded-b-2xl flex items-center justify-between gap-2 shrink-0">
           {/* Progress dots */}
           <div className="flex items-center gap-1">
             {Array.from({ length: Math.min(totalSteps, 11) }).map((_, idx) => (
