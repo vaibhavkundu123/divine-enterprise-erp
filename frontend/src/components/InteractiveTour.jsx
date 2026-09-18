@@ -242,44 +242,34 @@ export default function InteractiveTour({
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-auto">
-      {/* 1. SVG Cutout Mask Backdrop */}
-      <svg className="fixed inset-0 w-full h-full pointer-events-auto">
-        <defs>
-          <mask id="tour-spotlight-cutout">
-            <rect width="100%" height="100%" fill="white" />
-            {targetRect && (
-              <rect
-                x={Math.max(0, targetRect.left - pad)}
-                y={Math.max(0, targetRect.top - pad)}
-                width={targetRect.width + pad * 2}
-                height={targetRect.height + pad * 2}
-                rx="10"
-                fill="black"
-              />
-            )}
-          </mask>
-        </defs>
-        <rect
-          width="100%"
-          height="100%"
-          fill="rgba(5, 9, 20, 0.78)"
-          mask="url(#tour-spotlight-cutout)"
+      {/* 1. Backdrop click-catcher when target is not yet located */}
+      {!targetRect && (
+        <div
+          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm"
           onClick={onClose}
         />
-      </svg>
+      )}
 
-      {/* 2. Pulsing Neon Highlight Ring around the Target */}
+      {/* 2. Transparent backdrop click-catcher to dismiss when clicking outside */}
+      <div
+        className="fixed inset-0 z-35"
+        onClick={onClose}
+      />
+
+      {/* 3. Spotlight Cutout: Transparent Center with 9999px Dark Dimmed Outer Shadow & Neon Glowing Border */}
       {targetRect && (
         <div
+          onClick={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
             left: `${targetRect.left - pad}px`,
             top: `${targetRect.top - pad}px`,
             width: `${targetRect.width + pad * 2}px`,
             height: `${targetRect.height + pad * 2}px`,
-            pointerEvents: 'none',
+            boxShadow: '0 0 0 9999px rgba(5, 9, 20, 0.82), 0 0 30px rgba(34, 211, 238, 0.6), inset 0 0 16px rgba(34, 211, 238, 0.15)',
+            background: 'transparent',
           }}
-          className="border-2 border-cyan-400/90 rounded-xl shadow-[0_0_25px_rgba(34,211,238,0.55)] transition-all duration-200 z-50"
+          className="z-40 border-2 border-cyan-400 rounded-xl pointer-events-auto transition-all duration-200"
         >
           {/* Animated corner accents */}
           <span className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping" />
