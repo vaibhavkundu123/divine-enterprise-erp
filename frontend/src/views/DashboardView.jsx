@@ -415,6 +415,15 @@ export default function DashboardView({
                 <span>Return Rate: <strong className="text-slate-200">{formatPercent(kpis.cr_rate)}</strong></span>
                 <span>{kpis.cr_units} returns</span>
               </div>
+
+              {kpis.cr_holding_units > 0 && (
+                <button
+                  onClick={onRestockReturns}
+                  className="w-full mt-2 btn btn-primary text-xs py-1.5 h-7 font-medium"
+                >
+                  Restock All {kpis.cr_holding_units} Units to Warehouse
+                </button>
+              )}
             </div>
 
             {/* Exchanges Status */}
@@ -432,6 +441,15 @@ export default function DashboardView({
                 <span>Exchange Rate: <strong className="text-slate-200">{formatPercent(kpis.exchange_rate)}</strong></span>
                 <span className="text-emerald-400 text-[11px] font-medium">Re-dispatch OK</span>
               </div>
+
+              {(kpis.exchange_intake_units > 0 || ((kpis.exchange_units || 0) > (kpis.exchange_restocked_units || 0))) && (
+                <button
+                  onClick={onRestockExchanges}
+                  className="w-full mt-2 btn btn-primary text-xs py-1.5 h-7 font-medium"
+                >
+                  Restock All {kpis.exchange_intake_units || (kpis.exchange_units - (kpis.exchange_restocked_units || 0)) || 1} Units to Warehouse
+                </button>
+              )}
             </div>
           </div>
         </div>
