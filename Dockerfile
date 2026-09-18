@@ -19,7 +19,7 @@ FROM python:3.11-slim
 # Prevent Python from writing .pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=7860 \
+    PORT=8000 \
     ENVIRONMENT=production
 
 WORKDIR /app
@@ -52,10 +52,11 @@ USER appuser
 
 # Health check probe
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-7860}/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
-EXPOSE 7860
+EXPOSE 8000
 
-# Run production Uvicorn ASGI server on port 7860 (Hugging Face default) or $PORT
-CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]
+# Run production Uvicorn ASGI server
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
 
