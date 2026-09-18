@@ -423,31 +423,31 @@ Allows store managers and business owners to securely monitor and manage operati
 
 Every metric in Divine Enterprise ERP is governed by strict mathematical specifications implemented in [`backend/app/services/financial_engine.py`](<file:///d:/Business%20Website/backend/app/services/financial_engine.py>):
 
-| No.          | Metric Name                            | Mathematical Specification                                                                                                           | Business Significance                                                             |
-| :----------- | :------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------- |
-| **1**  | **Total Inward Units**           | $S_{\text{inward}} = \sum \text{inventory}_{\text{procurement}}$                                                                   | Gross physical inventory ever procured.                                           |
-| **2**  | **Total Dispatched Units**       | $S_{\text{dispatched}} = \sum \text{quantity\_sold}_{\text{sales}}$                                                                | Gross units dispatched across all orders.                                         |
-| **3**  | **Total Restocked Units**        | $S_{\text{restocked}} = S_{\text{rto\_restocked}} + S_{\text{cr\_restocked}} + S_{\text{exch\_restocked}}$                         | Units returned, inspected, and approved back into stock.                          |
-| **4**  | **Usable Sellable Stock**        | $S_{\text{usable}} = S_{\text{inward}} - S_{\text{dispatched}} + S_{\text{restocked}}$                                             | **The single true source of sellable stock**. Prevents phantom overselling. |
-| **5**  | **RTO Quarantine Units**         | $S_{\text{rto\_holding}} = \sum (\text{units})_{\text{status} = \text{'RECEIVED'}}$                                                | Undelivered parcels received at dock; strictly un-sellable.                       |
-| **6**  | **Customer Return Quarantine**   | $S_{\text{cr\_holding}} = \sum (\text{units})_{\text{status} = \text{'RECEIVED'}}$                                                 | Customer returns undergoing physical QC inspection.                               |
-| **7**  | **Exchange Intake Quarantine**   | $S_{\text{exch\_holding}} = \sum (\text{units})_{\text{status} = \text{'RECEIVED'}}$                                               | Inbound swap units awaiting QC and restocking.                                    |
-| **8**  | **Total Quarantine Buffer**      | $S_{\text{quarantine}} = S_{\text{rto\_holding}} + S_{\text{cr\_holding}} + S_{\text{exch\_holding}}$                              | Total units protected from accidental dispatch.                                   |
-| **9**  | **Weighted Average Cost (WAC)**  | $\text{WAC} = \frac{\sum (\text{inventory}_i \times \text{purchase\_rate}_i)}{\sum \text{inventory}_i}$                            | Blended cost per unit across multiple procurement batches.                        |
-| **10** | **Inventory Valuation (WAC)**    | $V_{\text{inventory}} = S_{\text{usable}} \times \text{WAC}$                                                                       | True monetary value of active sellable stock.                                     |
-| **11** | **Dual-Pricing Resolution**      | $\text{Revenue} = \text{Invoice Total}$ OR $(\text{Qty} \times \text{Price})$                                                    | Eliminates penny drift across split wholesale invoices.                           |
-| **12** | **Total Dispatched Revenue**     | $R_{\text{gross}} = \sum \text{total\_revenue}_{\text{sales}}$                                                                     | Gross value of all merchandise dispatched.                                        |
-| **13** | **Total COGS**                   | $\text{COGS}_{\text{gross}} = \sum \text{cogs}_{\text{sales}}$                                                                     | Purchase cost of all dispatched merchandise.                                      |
-| **14** | **Gross Profit**                 | $\text{GP} = R_{\text{gross}} - \text{COGS}_{\text{gross}}$                                                                        | Core operating margin before overhead.                                            |
-| **15** | **Gross Profit Margin %**        | $\text{Margin}_{\text{GP}} = \frac{\text{GP}}{R_{\text{gross}}} \times 100$                                                        | Unit operational profitability ratio.                                             |
-| **16** | **Adjusted Realized Revenue**    | $R_{\text{adj}} = R_{\text{gross}} - (R_{\text{rto}} + R_{\text{cr}})$                                                             | Cash expected from successfully delivered orders.                                 |
-| **17** | **Net Realized Profit (5-Tier)** | $\text{NP} = \text{GP} - \text{Loss}_{\text{RTO}} - \text{Loss}_{\text{CR}} - \text{Spend}_{\text{Ads}} - \text{Exp}_{\text{Ops}}$ | **True net cash profit** after returns and marketing costs.                 |
-| **18** | **RTO Damage Loss Rate %**       | $\text{Rate}_{\text{rto\_dmg}} = \frac{S_{\text{rto\_damaged}}}{S_{\text{rto\_total}}} \times 100$                                 | Courier handling damage benchmark.                                                |
-| **19** | **Customer Return Loss Rate %**  | $\text{Rate}_{\text{cr\_dmg}} = \frac{S_{\text{cr\_damaged}}}{S_{\text{cr\_total}}} \times 100$                                    | Defect / customer wear scrap percentage.                                          |
-| **20** | **Delivery Success Rate %**      | $\text{Rate}_{\text{success}} = \frac{S_{\text{dispatched}} - (S_{\text{rto}} + S_{\text{cr}})}{S_{\text{dispatched}}} \times 100$ | Percentage of shipped parcels generating settled cash.                            |
-| **21** | **Continuous Bank Balance**      | $\text{Bal}_{\text{bank}} = \sum \text{Credits} - \sum \text{Debits}$                                                              | Exact running treasury cash balance.                                              |
-| **22** | **Blended Marketing ROAS**       | $\text{ROAS} = \frac{R_{\text{gross}}}{\text{Total Ad Spend}}$                                                                     | Return on ad spend across all digital channels.                                   |
-| **23** | **4-Tier Stock Health Status**   | Star ($\ge 30$) \| Adequate ($10-29$) \| Low ($1-9$) \| Depleted ($0$)                                                       | Live replenishment and inventory warning classification.                          |
+| No. | Metric Name | Mathematical Specification | Business Significance |
+| :--- | :--- | :--- | :--- |
+| **1** | **Total Inward Units** | $S_{\text{inward}} = \sum \text{Units}_{\text{procured}}$ | Gross physical inventory ever procured. |
+| **2** | **Total Dispatched Units** | $S_{\text{dispatched}} = \sum \text{Units}_{\text{sold}}$ | Gross units dispatched across all orders. |
+| **3** | **Total Restocked Units** | $S_{\text{restocked}} = S_{\text{rto}} + S_{\text{returns}} + S_{\text{exchanges}}$ | Units returned, inspected, and approved back into stock. |
+| **4** | **Usable Sellable Stock** | $S_{\text{usable}} = S_{\text{inward}} - S_{\text{dispatched}} + S_{\text{restocked}}$ | **The single true source of sellable stock**. Prevents phantom overselling. |
+| **5** | **RTO Quarantine Units** | $S_{\text{rto-hold}} = \sum \text{Units}_{\text{received}}$ | Undelivered parcels received at dock; strictly un-sellable. |
+| **6** | **Customer Return Quarantine** | $S_{\text{cr-hold}} = \sum \text{Units}_{\text{received}}$ | Customer returns undergoing physical QC inspection. |
+| **7** | **Exchange Intake Quarantine** | $S_{\text{exch-hold}} = \sum \text{Units}_{\text{received}}$ | Inbound swap units awaiting QC and restocking. |
+| **8** | **Total Quarantine Buffer** | $S_{\text{quarantine}} = S_{\text{rto-hold}} + S_{\text{cr-hold}} + S_{\text{exch-hold}}$ | Total units protected from accidental dispatch. |
+| **9** | **Weighted Average Cost (WAC)** | $\text{WAC} = \frac{\sum (\text{Units}_i \times \text{Rate}_i)}{\sum \text{Units}_i}$ | Blended cost per unit across multiple procurement batches. |
+| **10** | **Inventory Valuation (WAC)** | $V_{\text{inventory}} = S_{\text{usable}} \times \text{WAC}$ | True monetary value of active sellable stock. |
+| **11** | **Dual-Pricing Resolution** | $\text{Revenue} = \text{Invoice Total} \text{ or } (\text{Qty} \times \text{Price})$ | Eliminates penny drift across split wholesale invoices. |
+| **12** | **Total Dispatched Revenue** | $R_{\text{gross}} = \sum \text{Revenue}_{\text{sales}}$ | Gross value of all merchandise dispatched. |
+| **13** | **Total COGS** | $\text{COGS}_{\text{gross}} = \sum \text{COGS}_{\text{sales}}$ | Purchase cost of all dispatched merchandise. |
+| **14** | **Gross Profit** | $\text{GP} = R_{\text{gross}} - \text{COGS}_{\text{gross}}$ | Core operating margin before overhead. |
+| **15** | **Gross Profit Margin %** | $\text{Margin}_{\text{GP}} = \frac{\text{GP}}{R_{\text{gross}}} \times 100$ | Unit operational profitability ratio. |
+| **16** | **Adjusted Realized Revenue** | $R_{\text{adj}} = R_{\text{gross}} - (R_{\text{rto}} + R_{\text{returns}})$ | Cash expected from successfully delivered orders. |
+| **17** | **Net Realized Profit (5-Tier)** | $\text{NP} = \text{GP} - \text{Loss}_{\text{rto}} - \text{Loss}_{\text{returns}} - \text{Spend}_{\text{ads}} - \text{Expenses}$ | **True net cash profit** after returns and marketing costs. |
+| **18** | **RTO Damage Loss Rate %** | $\text{Rate}_{\text{rto-dmg}} = \frac{S_{\text{rto-damaged}}}{S_{\text{rto-total}}} \times 100$ | Courier handling damage benchmark. |
+| **19** | **Customer Return Loss Rate %** | $\text{Rate}_{\text{cr-dmg}} = \frac{S_{\text{cr-damaged}}}{S_{\text{cr-total}}} \times 100$ | Defect / customer wear scrap percentage. |
+| **20** | **Delivery Success Rate %** | $\text{Rate}_{\text{success}} = \frac{S_{\text{dispatched}} - (S_{\text{rto}} + S_{\text{returns}})}{S_{\text{dispatched}}} \times 100$ | Percentage of shipped parcels generating settled cash. |
+| **21** | **Continuous Bank Balance** | $\text{Balance} = \sum \text{Credits} - \sum \text{Debits}$ | Exact running treasury cash balance. |
+| **22** | **Blended Marketing ROAS** | $\text{ROAS} = \frac{R_{\text{gross}}}{\text{Total Ad Spend}}$ | Return on ad spend across all digital channels. |
+| **23** | **4-Tier Stock Health Status** | Star ($\ge 30$) \| Adequate ($10-29$) \| Low ($1-9$) \| Depleted ($0$) | Live replenishment and inventory warning classification. |
 
 ---
 
