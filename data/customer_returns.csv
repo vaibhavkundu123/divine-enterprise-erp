@@ -1,0 +1,6 @@
+id,return_id,date,style_no,quantity,refund_amount,reverse_fee,primary_reason,secondary_reason,status,qc_grade,received_date,restocked_date,reverse_awb,notes
+1,CR-006,2026-08-30,DE26003B,1,336.34,175.0,Don't need the product anymore,Did not like the product,Intake,,2026-09-04,,Shadowfax  AWB-R2456842272FPL,
+2,CR-005,2026-08-31,DE26003W,1,335.92,175.0,Have size / fit related issues,Did not like the fit,Intake,,2026-09-07,,Delhivery AWB-1490711614301402,
+3,CR-007,2026-08-31,DE26030B,1,280.9,175.0,Have other quality related issues,Product's quality or performance is not good,Intake,,2026-09-04,,Delhivery AWB-1490711700640883,
+4,CR-008,2026-09-04,DE26005M,1,307.33,175.0,Have size / fit related issues,Size correct but too loose,Intake,,2026-09-14,,Shadowfax  AWB-R2470043807FPL,
+5,CR-010,2026-09-07,DE26003W,1,295.65,175.0,Have size / fit related issues,Did not like the fit,In Transit,,,,Shadowfax  AWB-R2481671535FPL,

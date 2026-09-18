@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  enterprise-ops:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enterprise-ops-platform
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:////app/data/app.db
+      - SERVER_PORT=8000
+    volumes:
+      # CRITICAL: Persistent volume ensures zero data loss across container updates
+      - ./data:/app/data
+      # Optional: bind mount spreadsheets for continuous desktop sync
+      - ./Logistic.xlsx:/app/Logistic.xlsx
+      - ./Sales_Inventory.xlsx:/app/Sales_Inventory.xlsx
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

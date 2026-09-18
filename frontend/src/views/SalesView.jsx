@@ -1,0 +1,223 @@
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Search, Plus, Download, Edit2, Trash2, Filter } from 'lucide-react';
+import { api } from '../services/api';
+import { exportToExcel, exportToCSV } from '../utils/exportUtils';
+import { SalesEditModal } from '../modals/EditModals';
+import { formatCurrency } from '../utils/formatters';
+
+export default function SalesView({ onRecordSaleClick }) {
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [editingOrder, setEditingOrder] = useState(null);
+
+  const loadSales = () => {
+    setLoading(true);
+    api.getSales()
+      .then((data) => setSales(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadSales();
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this sales order and restore units back to inventory?')) return;
+    try {
+      await api.deleteSale(id);
+      loadSales();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const filtered = sales.filter((s) =>
+    s.style_no.toLowerCase().includes(search.toLowerCase()) ||
+    s.date.includes(search) ||
+    (s.reference && s.reference.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const handleExcelExport = () => {
+    const formatted = filtered.map((s) => ({
+      'Sl No.': s.sl_no,
+      Date: s.date,
+      'Style No.': s.style_no,
+      'Quantity Sold': s.quantity_sold,
+      'Selling Price ($)': s.selling_price,
+      'Total Revenue ($)': s.total_revenue,
+      'Cost of Goods Sold ($)': s.cogs,
+      'Profit ($)': s.profit,
+      'Profit Margin (%)': (s.profit_margin * 100).toFixed(2) + '%',
+      Reference: s.reference || 'Direct Sale',
+    }));
+    exportToExcel(formatted, `Sales_Orders_${new Date().toISOString().split('T')[0]}.xlsx`, 'Sales');
+  };
+
+  const handleCsvExport = () => {
+    exportToCSV(filtered, `sales_orders_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Top Controls Bar */}
+      <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-72">
+            <label htmlFor="sales-search-input" className="sr-only">Search sales orders</label>
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+            <input
+              id="sales-search-input"
+              name="sales_search"
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by SKU, Date, Channel..."
+              style={{ paddingLeft: '2.5rem' }}
+              className="input-field text-xs h-9 bg-slate-900 border-slate-700"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9">
+            <Download className="w-3.5 h-3.5" />
+            <span>Excel</span>
+          </button>
+          <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9">
+            <Download className="w-3.5 h-3.5" />
+            <span>CSV</span>
+          </button>
+          <button onClick={onRecordSaleClick} className="btn btn-primary text-xs px-3.5 h-9">
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Sale</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Orders Table */}
+      <div className="glass-panel overflow-hidden border border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
+              <tr>
+                <th className="py-3 px-4">#</th>
+                <th className="py-3 px-4">Date</th>
+                <th className="py-3 px-4">Style SKU</th>
+                <th className="py-3 px-4 text-center">Qty</th>
+                <th className="py-3 px-4 text-right">Selling Price</th>
+                <th className="py-3 px-4 text-right">Total Revenue</th>
+                <th className="py-3 px-4 text-right">COGS</th>
+                <th className="py-3 px-4 text-right">Gross Profit</th>
+                <th className="py-3 px-4 text-right">Margin %</th>
+                <th className="py-3 px-4">Reference</th>
+                <th className="py-3 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {loading ? (
+                <tr>
+                  <td colSpan="11" className="py-8 text-center text-slate-400">Loading sales records...</td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="11" className="py-8 text-center text-slate-400">No sales records found.</td>
+                </tr>
+              ) : (
+                filtered.map((s) => {
+                  const marginPct = (s.profit_margin * 100).toFixed(1);
+                  return (
+                    <tr key={s.id} className="hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-4 font-mono text-slate-400">{s.sl_no}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">{s.date}</td>
+                      <td className="py-3 px-4 font-bold text-white uppercase">{s.style_no}</td>
+                      <td className="py-3 px-4 text-center font-semibold text-white">{s.quantity_sold}</td>
+                      <td className="py-3 px-4 text-right">{formatCurrency(s.selling_price)}</td>
+                      <td className="py-3 px-4 text-right font-semibold text-white">{formatCurrency(s.total_revenue)}</td>
+                      <td className="py-3 px-4 text-right text-rose-300">{formatCurrency(s.cogs)}</td>
+                      <td className={`py-3 px-4 text-right font-bold ${s.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {formatCurrency(s.profit)}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                          s.profit >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                        }`}>
+                          {marginPct}%
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">{s.reference || 'Direct'}</td>
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setEditingOrder(s)}
+                            className="p-1 rounded text-slate-400 hover:text-blue-400 hover:bg-slate-800 transition-colors"
+                            title="Edit Order"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(s.id)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                            title="Delete Order"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            {filtered.length > 0 && (() => {
+              const totalQty = filtered.reduce((acc, s) => acc + (s.quantity_sold || 0), 0);
+              const totalRev = filtered.reduce((acc, s) => acc + (s.total_revenue || 0), 0);
+              const totalCogs = filtered.reduce((acc, s) => acc + (s.cogs || 0), 0);
+              const totalProf = filtered.reduce((acc, s) => acc + (s.profit || 0), 0);
+              const blMargin = totalRev > 0 ? ((totalProf / totalRev) * 100).toFixed(1) : '0.0';
+
+              return (
+                <tfoot className="bg-slate-900 border-t-2 border-slate-700 font-bold text-white">
+                  <tr>
+                    <td className="py-3 px-4 font-mono text-xs text-blue-400">TOTAL</td>
+                    <td className="py-3 px-4 text-slate-300 text-xs">{filtered.length} Orders</td>
+                    <td className="py-3 px-4 text-slate-400">-</td>
+                    <td className="py-3 px-4 text-center font-bold text-white text-xs">{totalQty}</td>
+                    <td className="py-3 px-4 text-right text-slate-400">-</td>
+                    <td className="py-3 px-4 text-right font-bold text-emerald-400 text-xs">{formatCurrency(totalRev)}</td>
+                    <td className="py-3 px-4 text-right font-bold text-rose-400 text-xs">{formatCurrency(totalCogs)}</td>
+                    <td className={`py-3 px-4 text-right font-bold text-xs ${totalProf >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {formatCurrency(totalProf)}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                        totalProf >= 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'
+                      }`}>
+                        {blMargin}%
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-400">-</td>
+                    <td className="py-3 px-4 text-center text-slate-400">-</td>
+                  </tr>
+                </tfoot>
+              );
+            })()}
+          </table>
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {editingOrder && (
+        <SalesEditModal
+          order={editingOrder}
+          onClose={() => setEditingOrder(null)}
+          onSuccess={() => {
+            setEditingOrder(null);
+            loadSales();
+          }}
+        />
+      )}
+    </div>
+  );
+}

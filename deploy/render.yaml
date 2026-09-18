@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: enterprise-ops-platform
+    env: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    disk:
+      name: enterprise-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        value: sqlite:////app/data/app.db

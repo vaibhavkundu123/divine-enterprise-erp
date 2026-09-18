@@ -1,0 +1,2 @@
+id,exchange_id,date,original_style,exchanged_style,quantity,standard_price,reverse_fee,amount_received,cogs,profit,primary_reason,secondary_reason,return_status,exchange_status,reverse_awb,received_date,restocked_date
+1,EX-002,2026-09-01,DE26004R,DE26004R,1,299.68,175.0,124.68,219.0,-94.32,Received defective product (stains / damaged / torn),Product was dirty or had stains,Intake,Dispatched,Delhivery AWB-1490711701466172,2026-09-16,
