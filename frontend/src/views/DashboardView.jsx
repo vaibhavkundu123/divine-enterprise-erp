@@ -230,7 +230,7 @@ export default function DashboardView({
             {kpis.rto_holding_units > 0 && (
               <button
                 onClick={onRestockDock}
-                className="btn btn-primary text-xs py-1 px-3 h-7 font-semibold shadow-sm bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500"
+                className="btn btn-primary text-xs py-1 px-3 h-7 font-semibold shadow-sm bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                 title="Bulk Restock all received units into active stock"
               >
                 ⚡ Bulk Restock All Holding ({kpis.rto_holding_units})
@@ -243,10 +243,10 @@ export default function DashboardView({
               Sync: <strong className="text-emerald-400 font-semibold">Active</strong>
             </span>
             <button
-              onClick={() => onNavigateTab && onNavigateTab('analytics')}
-              className="btn btn-outline text-xs py-1 px-2.5 h-7 text-slate-300 hover:text-white"
+              onClick={() => onNavigateTab && onNavigateTab('rto')}
+              className="btn btn-outline text-xs py-1 px-2.5 h-7 border-blue-500/30 text-blue-300 hover:text-white"
             >
-              View Daily Ledger
+              Courier RTO Returns Dock ➔
             </button>
           </div>
         </div>
@@ -278,7 +278,7 @@ export default function DashboardView({
             {kpis.cr_holding_units > 0 && (
               <button
                 onClick={onRestockReturns}
-                className="btn text-xs py-1 px-3 h-7 font-semibold text-white shadow-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
+                className="btn btn-primary text-xs py-1 px-3 h-7 font-semibold shadow-sm bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                 title="Bulk Restock all received customer return units into active stock"
               >
                 ⚡ Bulk Restock All Intake ({kpis.cr_holding_units})
@@ -324,7 +324,7 @@ export default function DashboardView({
             {kpis.exchange_intake_units > 0 && (
               <button
                 onClick={onRestockExchanges}
-                className="btn text-xs py-1 px-3 h-7 font-semibold text-white shadow-sm bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500"
+                className="btn btn-primary text-xs py-1 px-3 h-7 font-semibold shadow-sm bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
                 title="Bulk Restock all received exchange returns into active stock"
               >
                 ⚡ Bulk Restock All Intake ({kpis.exchange_intake_units})
