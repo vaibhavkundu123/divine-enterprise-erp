@@ -3,6 +3,24 @@ import { Package, Search, Download, Filter, AlertCircle, RefreshCw, Layers, Doll
 import { api } from '../services/api';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { formatCurrency, formatNumber } from '../utils/formatters';
+import useTableControls from '../utils/useTableControls';
+import SortableHeader from '../components/SortableHeader';
+
+const COLUMNS = [
+  { key: 'style_no', sortable: true, filterable: true },
+  { key: 'total_purchased', sortable: true, filterable: true },
+  { key: 'total_sold', sortable: true, filterable: true },
+  { key: 'exch_out', sortable: true, filterable: true, getValue: (r) => r.exch_out || 0 },
+  { key: 'rto_restocked', sortable: true, filterable: true, getValue: (r) => r.rto_restocked || 0 },
+  { key: 'cr_restocked', sortable: true, filterable: true, getValue: (r) => r.cr_restocked || 0 },
+  { key: 'exch_restocked', sortable: true, filterable: true, getValue: (r) => r.exch_restocked || 0 },
+  { key: 'stock_on_hand', sortable: true, filterable: true },
+  { key: 'unit_cost', sortable: true, filterable: true },
+  { key: 'stock_valuation', sortable: true, filterable: true },
+  { key: 'total_revenue', sortable: true, filterable: true, getValue: (r) => r.total_revenue || 0 },
+  { key: 'total_profit', sortable: true, filterable: true },
+  { key: 'status', sortable: true, filterable: true },
+];
 
 export default function StockView({ refreshTrigger }) {
   const [stock, setStock] = useState([]);
@@ -30,11 +48,21 @@ export default function StockView({ refreshTrigger }) {
     return () => window.removeEventListener('divine-sale-created', handleSaleCreated);
   }, []);
 
-  const filtered = stock.filter((item) => {
+  // Existing search + status filter
+  const searchFiltered = stock.filter((item) => {
     const matchesSearch = item.style_no.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || item.status.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+
+  // Column-level sort & filter
+  const {
+    sortConfig, columnFilters, requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, toggleFilterValue, selectOnlyFilter, selectAllFilter, deselectAllFilter,
+    clearFilter, clearAllFilters, activeFilterCount, processedData,
+  } = useTableControls({ data: searchFiltered, columns: COLUMNS });
+
+  const filtered = processedData;
 
   const totalValuation = stock.reduce((sum, item) => sum + (item.stock_valuation || 0), 0);
   const totalUnitsOnHand = stock.reduce((sum, item) => sum + (item.stock_on_hand || 0), 0);
@@ -76,6 +104,13 @@ export default function StockView({ refreshTrigger }) {
 
   const handleCsvExport = () => {
     exportToCSV(filtered, `stock_inventory_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  // Shared props for SortableHeader
+  const sharedHeaderProps = {
+    sortConfig, columnFilters, onSort: requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, onToggleFilter: toggleFilterValue, onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter, onDeselectAll: deselectAllFilter, onClearFilter: clearFilter,
   };
 
   return (
@@ -141,6 +176,18 @@ export default function StockView({ refreshTrigger }) {
               </button>
             ))}
           </div>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-blue-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
         </div>
 
         <div data-tour="stock-export" className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -168,19 +215,37 @@ export default function StockView({ refreshTrigger }) {
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-950/95 sticky top-0 z-20 text-slate-400 font-bold border-b border-slate-800 backdrop-blur-md">
               <tr>
-                <th data-tour="stock-col-sku" className="py-3.5 px-4 font-mono">Style No.</th>
-                <th data-tour="stock-col-inflow" className="py-3.5 px-4 text-center">Purchased (Inflow)</th>
-                <th data-tour="stock-col-outflow" className="py-3.5 px-4 text-center">Sold (Outflow)</th>
-                <th className="py-3.5 px-4 text-center">Exchanged Out (Sent)</th>
-                <th data-tour="stock-col-restocked" className="py-3.5 px-4 text-center">Restocked RTO 🚚</th>
-                <th className="py-3.5 px-4 text-center">Restocked CR ↩️</th>
-                <th className="py-3.5 px-4 text-center">Restocked Exch 🔄</th>
-                <th data-tour="stock-col-hand" className="py-3.5 px-4 text-center font-extrabold text-white">Stock on Hand</th>
-                <th data-tour="stock-col-wac" className="py-3.5 px-4 text-right">Unit Cost ($)</th>
-                <th className="py-3.5 px-4 text-right">Stock Valuation ($)</th>
-                <th className="py-3.5 px-4 text-right">Total Revenue ($)</th>
-                <th className="py-3.5 px-4 text-right">Total Profit ($)</th>
-                <th data-tour="stock-col-status" className="py-3.5 px-4 text-center">Stock Status</th>
+                <SortableHeader label="Style No." columnKey="style_no" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['style_no']}
+                  extraProps={{ 'data-tour': 'stock-col-sku' }}
+                  className="font-mono"
+                />
+                <SortableHeader label="Purchased (Inflow)" columnKey="total_purchased" sortable align="center" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'stock-col-inflow' }}
+                />
+                <SortableHeader label="Sold (Outflow)" columnKey="total_sold" sortable align="center" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'stock-col-outflow' }}
+                />
+                <SortableHeader label="Exchanged Out (Sent)" columnKey="exch_out" sortable align="center" {...sharedHeaderProps} />
+                <SortableHeader label="Restocked RTO 🚚" columnKey="rto_restocked" sortable align="center" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'stock-col-restocked' }}
+                />
+                <SortableHeader label="Restocked CR ↩️" columnKey="cr_restocked" sortable align="center" {...sharedHeaderProps} />
+                <SortableHeader label="Restocked Exch 🔄" columnKey="exch_restocked" sortable align="center" {...sharedHeaderProps} />
+                <SortableHeader label="Stock on Hand" columnKey="stock_on_hand" sortable align="center" {...sharedHeaderProps}
+                  className="font-extrabold text-white"
+                  extraProps={{ 'data-tour': 'stock-col-hand' }}
+                />
+                <SortableHeader label="Unit Cost ($)" columnKey="unit_cost" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'stock-col-wac' }}
+                />
+                <SortableHeader label="Stock Valuation ($)" columnKey="stock_valuation" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Total Revenue ($)" columnKey="total_revenue" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Total Profit ($)" columnKey="total_profit" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Stock Status" columnKey="status" sortable filterable align="center" {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['status']}
+                  extraProps={{ 'data-tour': 'stock-col-status' }}
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">

@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, Check, AlertTriangle, Download, Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { RotateCcw, Check, AlertTriangle, Download, Plus, Search, Edit2, Trash2, Filter } from 'lucide-react';
 import { api } from '../services/api';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { RTOEditModal } from '../modals/EditModals';
 import { formatCurrency } from '../utils/formatters';
+import useTableControls from '../utils/useTableControls';
+import SortableHeader from '../components/SortableHeader';
+
+const COLUMNS = [
+  { key: 'date', sortable: true, filterable: true },
+  { key: 'style_no', sortable: true, filterable: true },
+  { key: 'quantity', sortable: true, filterable: true },
+  { key: 'sale_price', sortable: true, filterable: true },
+  { key: 'courier_fee', sortable: true, filterable: true },
+  { key: 'tracking_no', sortable: true, filterable: true, getValue: (r) => r.tracking_no || '—' },
+  { key: 'status', sortable: true, filterable: true },
+  { key: 'received_date', sortable: true, filterable: true, getValue: (r) => r.received_date || '—' },
+  { key: 'restocked_date', sortable: true, filterable: true, getValue: (r) => r.restocked_date || '—' },
+];
 
 export default function RTOView() {
   const [rtos, setRtos] = useState([]);
@@ -107,7 +121,8 @@ export default function RTOView() {
 
   const holdingCount = rtos.filter((r) => r.status === 'Received').length;
 
-  const filtered = rtos.filter((r) => {
+  // Existing search + status filter
+  const searchFiltered = rtos.filter((r) => {
     const matchSearch =
       r.style_no.toLowerCase().includes(search.toLowerCase()) ||
       r.rto_id.toLowerCase().includes(search.toLowerCase()) ||
@@ -115,6 +130,15 @@ export default function RTOView() {
     const matchStatus = statusFilter === 'ALL' || r.status.toLowerCase() === statusFilter.toLowerCase();
     return matchSearch && matchStatus;
   });
+
+  // Column sort/filter
+  const {
+    sortConfig, columnFilters, requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, toggleFilterValue, selectOnlyFilter, selectAllFilter, deselectAllFilter,
+    clearFilter, clearAllFilters, activeFilterCount, processedData,
+  } = useTableControls({ data: searchFiltered, columns: COLUMNS });
+
+  const filtered = processedData;
 
   const getStatusPill = (status) => {
     switch (status) {
@@ -153,6 +177,12 @@ export default function RTOView() {
     exportToCSV(filtered, `rto_pipeline_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
+  const sharedHeaderProps = {
+    sortConfig, columnFilters, onSort: requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, onToggleFilter: toggleFilterValue, onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter, onDeselectAll: deselectAllFilter, onClearFilter: clearFilter,
+  };
+
   return (
     <div className="space-y-4">
       {/* Top Filter & Actions HUD */}
@@ -188,6 +218,19 @@ export default function RTOView() {
               </button>
             ))}
           </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-blue-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -227,15 +270,23 @@ export default function RTOView() {
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
                 <th className="py-3 px-3 text-center">Sl. No.</th>
-                <th className="py-3 px-4">Initiated Date</th>
-                <th className="py-3 px-4" data-tour="rto-col-sku">Style SKU</th>
-                <th className="py-3 px-4 text-center">Qty</th>
-                <th className="py-3 px-4 text-right">Sale Price</th>
-                <th className="py-3 px-4 text-right">Courier Fee</th>
-                <th className="py-3 px-4" data-tour="rto-col-tracking">Carrier Tracking</th>
-                <th className="py-3 px-4 text-center" data-tour="rto-col-status">Status</th>
-                <th className="py-3 px-4 text-center">Date Received</th>
-                <th className="py-3 px-4 text-center">Date Restocked</th>
+                <SortableHeader label="Initiated Date" columnKey="date" sortable {...sharedHeaderProps} />
+                <SortableHeader label="Style SKU" columnKey="style_no" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['style_no']}
+                  extraProps={{ 'data-tour': 'rto-col-sku' }}
+                />
+                <SortableHeader label="Qty" columnKey="quantity" sortable align="center" {...sharedHeaderProps} />
+                <SortableHeader label="Sale Price" columnKey="sale_price" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Courier Fee" columnKey="courier_fee" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Carrier Tracking" columnKey="tracking_no" sortable {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'rto-col-tracking' }}
+                />
+                <SortableHeader label="Status" columnKey="status" sortable filterable align="center" {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['status']}
+                  extraProps={{ 'data-tour': 'rto-col-status' }}
+                />
+                <SortableHeader label="Date Received" columnKey="received_date" sortable align="center" {...sharedHeaderProps} />
+                <SortableHeader label="Date Restocked" columnKey="restocked_date" sortable align="center" {...sharedHeaderProps} />
                 <th className="py-3 px-4 text-center" data-tour="rto-col-dock">Dock Operations</th>
                 <th className="py-3 px-4 text-center" data-tour="rto-col-actions">Actions</th>
               </tr>

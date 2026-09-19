@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { History, Search, Download, Trash2, RefreshCw, AlertCircle, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
+import { History, Search, Download, Trash2, RefreshCw, AlertCircle, CheckCircle2, Info, AlertTriangle, Filter } from 'lucide-react';
 import { api } from '../services/api';
+import useTableControls from '../utils/useTableControls';
+import SortableHeader from '../components/SortableHeader';
+
+const COLUMNS = [
+  { key: 'timestamp', sortable: true, filterable: true },
+  { key: 'category', sortable: true, filterable: true },
+  { key: 'action', sortable: true, filterable: true },
+  { key: 'summary', sortable: true, filterable: true },
+  { key: 'source', sortable: true, filterable: true },
+  { key: 'status', sortable: true, filterable: true },
+];
 
 export default function AuditView() {
   const [logs, setLogs] = useState([]);
@@ -58,11 +69,26 @@ export default function AuditView() {
 
   const categories = ['ALL', 'SALE', 'AD_SPEND', 'RTO', 'CUSTOMER_RETURN', 'EXCHANGE', 'STOCK', 'SYNC', 'EXPORT', 'SYSTEM', 'BANK'];
 
+  // Column sort/filter (applied after API-level category/search filtering)
+  const {
+    sortConfig, columnFilters, requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, toggleFilterValue, selectOnlyFilter, selectAllFilter, deselectAllFilter,
+    clearFilter, clearAllFilters, activeFilterCount, processedData,
+  } = useTableControls({ data: logs, columns: COLUMNS });
+
+  const filtered = processedData;
+
+  const sharedHeaderProps = {
+    sortConfig, columnFilters, onSort: requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, onToggleFilter: toggleFilterValue, onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter, onDeselectAll: deselectAllFilter, onClearFilter: clearFilter,
+  };
+
   return (
     <div className="space-y-4">
       {/* Top Filter and Controls */}
       <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3" data-tour="audit-toolbar">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
           <div className="relative w-full sm:w-64" data-tour="audit-search">
             <label htmlFor="audit-search-input" className="sr-only">Search audit trail</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
@@ -87,6 +113,19 @@ export default function AuditView() {
             />
             <span>5s Live Poll</span>
           </label>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-blue-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -130,21 +169,32 @@ export default function AuditView() {
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-white/10">
               <tr>
                 <th className="py-3 px-4">#</th>
-                <th className="py-3 px-4">Timestamp</th>
-                <th className="py-3 px-4" data-tour="audit-col-cat">Domain Category</th>
-                <th className="py-3 px-4" data-tour="audit-col-action">Action</th>
-                <th className="py-3 px-4" data-tour="audit-col-summary">Summary</th>
-                <th className="py-3 px-4">Source</th>
-                <th className="py-3 px-4 text-center">Severity</th>
+                <SortableHeader label="Timestamp" columnKey="timestamp" sortable {...sharedHeaderProps} />
+                <SortableHeader label="Domain Category" columnKey="category" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['category']}
+                  extraProps={{ 'data-tour': 'audit-col-cat' }}
+                />
+                <SortableHeader label="Action" columnKey="action" sortable {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'audit-col-action' }}
+                />
+                <SortableHeader label="Summary" columnKey="summary" sortable {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'audit-col-summary' }}
+                />
+                <SortableHeader label="Source" columnKey="source" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['source']}
+                />
+                <SortableHeader label="Severity" columnKey="status" sortable filterable align="center" {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['status']}
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr><td colSpan="7" className="py-8 text-center text-slate-400">Streaming audit history...</td></tr>
-              ) : logs.length === 0 ? (
+              ) : filtered.length === 0 ? (
                 <tr><td colSpan="7" className="py-8 text-center text-slate-400">No matching audit events recorded.</td></tr>
               ) : (
-                logs.map((l) => (
+                filtered.map((l) => (
                   <tr key={l.id} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-4 font-mono text-slate-500">{l.id}</td>
                     <td className="py-3 px-4 whitespace-nowrap font-mono text-[11px] text-slate-400">{l.timestamp}</td>
@@ -166,11 +216,11 @@ export default function AuditView() {
                 ))
               )}
             </tbody>
-            {logs.length > 0 && (
+            {filtered.length > 0 && (
               <tfoot className="bg-slate-900 border-t-2 border-slate-700 font-bold text-white">
                 <tr>
                   <td className="py-3 px-4 font-mono text-xs text-blue-400">TOTAL</td>
-                  <td className="py-3 px-4 text-slate-300 text-xs">{logs.length} Events Logged</td>
+                  <td className="py-3 px-4 text-slate-300 text-xs">{filtered.length} Events Logged</td>
                   <td className="py-3 px-4 text-slate-400 text-xs">-</td>
                   <td className="py-3 px-4 text-slate-400 text-xs">-</td>
                   <td className="py-3 px-4 text-slate-400 text-xs">-</td>

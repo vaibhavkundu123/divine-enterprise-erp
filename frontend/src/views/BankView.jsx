@@ -11,11 +11,22 @@ import {
   Wallet,
   TrendingDown,
   TrendingUp,
+  Filter,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { BankEditModal } from '../modals/EditModals';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { formatCurrency, formatNumber } from '../utils/formatters';
+import useTableControls from '../utils/useTableControls';
+import SortableHeader from '../components/SortableHeader';
+
+const COLUMNS = [
+  { key: 'sl_no', sortable: true, filterable: true },
+  { key: 'date', sortable: true, filterable: true },
+  { key: 'type', sortable: true, filterable: true },
+  { key: 'amount', sortable: true, filterable: true },
+  { key: 'running_balance', sortable: true, filterable: true },
+];
 
 export default function BankView() {
   const [transactions, setTransactions] = useState([]);
@@ -77,7 +88,8 @@ export default function BankView() {
   const totalCredited = creditedTx.reduce((acc, t) => acc + (t.amount || 0), 0);
   const totalDebited = debitedTx.reduce((acc, t) => acc + (t.amount || 0), 0);
 
-  const filtered = transactions.filter((t) => {
+  // Existing search + type filter
+  const searchFiltered = transactions.filter((t) => {
     const isCredit = (t.type || '').includes('Credit') || (t.type || '').includes('(+)');
     if (typeFilter === 'credit' && !isCredit) return false;
     if (typeFilter === 'debit' && isCredit) return false;
@@ -92,6 +104,15 @@ export default function BankView() {
     return true;
   });
 
+  // Column sort/filter
+  const {
+    sortConfig, columnFilters, requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, toggleFilterValue, selectOnlyFilter, selectAllFilter, deselectAllFilter,
+    clearFilter, clearAllFilters, activeFilterCount, processedData,
+  } = useTableControls({ data: searchFiltered, columns: COLUMNS });
+
+  const filtered = processedData;
+
   const handleExcelExport = () => {
     const formatted = filtered.map((t) => ({
       'Sl No': t.sl_no,
@@ -105,6 +126,12 @@ export default function BankView() {
 
   const handleCsvExport = () => {
     exportToCSV(filtered, `bank_statement_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  const sharedHeaderProps = {
+    sortConfig, columnFilters, onSort: requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, onToggleFilter: toggleFilterValue, onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter, onDeselectAll: deselectAllFilter, onClearFilter: clearFilter,
   };
 
   return (
@@ -259,6 +286,18 @@ export default function BankView() {
               🔴 Debited ({debitedTx.length})
             </button>
           </div>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-blue-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
@@ -285,11 +324,18 @@ export default function BankView() {
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
-                <th className="py-3 px-4">#</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4" data-tour="bank-col-type">Transaction Type</th>
-                <th className="py-3 px-4 text-right" data-tour="bank-col-amount">Amount ($)</th>
-                <th className="py-3 px-4 text-right" data-tour="bank-col-balance">Closing Running Balance ($)</th>
+                <SortableHeader label="#" columnKey="sl_no" sortable {...sharedHeaderProps} />
+                <SortableHeader label="Date" columnKey="date" sortable {...sharedHeaderProps} />
+                <SortableHeader label="Transaction Type" columnKey="type" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['type']}
+                  extraProps={{ 'data-tour': 'bank-col-type' }}
+                />
+                <SortableHeader label="Amount ($)" columnKey="amount" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'bank-col-amount' }}
+                />
+                <SortableHeader label="Closing Running Balance ($)" columnKey="running_balance" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'bank-col-balance' }}
+                />
                 <th className="py-3 px-4 text-center" data-tour="bank-col-actions">Actions</th>
               </tr>
             </thead>

@@ -1,9 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Download, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Search, Download, Trash2, Edit2, Filter } from 'lucide-react';
 import { api } from '../services/api';
 import { exportToExcel } from '../utils/exportUtils';
 import { formatCurrency } from '../utils/formatters';
 import { ProcurementEditModal } from '../modals/EditModals';
+import useTableControls from '../utils/useTableControls';
+import SortableHeader from '../components/SortableHeader';
+
+const BATCH_COLUMNS = [
+  { key: 'id', sortable: true, filterable: true },
+  { key: 'date', sortable: true, filterable: true },
+  { key: 'style_no', sortable: true, filterable: true },
+  { key: 'inventory', sortable: true, filterable: true },
+  { key: 'purchase_rate', sortable: true, filterable: true },
+  { key: 'total_value', sortable: true, filterable: true },
+];
+
+const DAILY_COLUMNS = [
+  { key: 'date', sortable: true, filterable: true },
+  { key: 'style_count', sortable: true, filterable: true },
+  { key: 'total_units', sortable: true, filterable: true },
+  { key: 'daily_gross_total', sortable: true, filterable: true },
+  { key: 'avg_purchase_rate', sortable: true, filterable: true },
+];
 
 export default function ProcurementView() {
   const [batches, setBatches] = useState([]);
@@ -55,20 +74,73 @@ export default function ProcurementView() {
         purchase_rate: parseFloat(purchaseRate),
       });
       setShowAddModal(false);
+      setStyleNo('');
+      setPurchaseRate('');
       loadData();
     } catch (err) {
       alert(err.message);
     }
   };
 
-  const filteredBatches = batches.filter((b) =>
+  const handleUpdate = async (id, updatedData) => {
+    try {
+      await api.updateProcurement(id, updatedData);
+      setEditingBatch(null);
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const searchFilteredBatches = batches.filter((b) =>
     b.style_no.toLowerCase().includes(search.toLowerCase()) || b.date.includes(search)
   );
+
+  // Column sort/filter for batches
+  const batchControls = useTableControls({ data: searchFilteredBatches, columns: BATCH_COLUMNS });
+  const filteredBatches = batchControls.processedData;
+
+  // Column sort/filter for daily summary
+  const dailyControls = useTableControls({ data: dailySummary, columns: DAILY_COLUMNS });
+  const filteredDaily = dailyControls.processedData;
+
+  const batchHeaderProps = {
+    sortConfig: batchControls.sortConfig,
+    columnFilters: batchControls.columnFilters,
+    onSort: batchControls.requestSort,
+    clearSort: batchControls.clearSort,
+    getUniqueValues: batchControls.getUniqueValues,
+    getValueCounts: batchControls.getValueCounts,
+    isFilterActive: batchControls.isFilterActive,
+    onToggleFilter: batchControls.toggleFilterValue,
+    onSelectOnlyFilter: batchControls.selectOnlyFilter,
+    onSelectAll: batchControls.selectAllFilter,
+    onDeselectAll: batchControls.deselectAllFilter,
+    onClearFilter: batchControls.clearFilter,
+  };
+
+  const dailyHeaderProps = {
+    sortConfig: dailyControls.sortConfig,
+    columnFilters: dailyControls.columnFilters,
+    onSort: dailyControls.requestSort,
+    clearSort: dailyControls.clearSort,
+    getUniqueValues: dailyControls.getUniqueValues,
+    getValueCounts: dailyControls.getValueCounts,
+    isFilterActive: dailyControls.isFilterActive,
+    onToggleFilter: dailyControls.toggleFilterValue,
+    onSelectOnlyFilter: dailyControls.selectOnlyFilter,
+    onSelectAll: dailyControls.selectAllFilter,
+    onDeselectAll: dailyControls.deselectAllFilter,
+    onClearFilter: dailyControls.clearFilter,
+  };
+
+  const activeFilterCount = activeSubTab === 'batches' ? batchControls.activeFilterCount : dailyControls.activeFilterCount;
+  const clearCurrentFilters = activeSubTab === 'batches' ? batchControls.clearAllFilters : dailyControls.clearAllFilters;
 
   return (
     <div className="space-y-4">
       <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3" data-tour="proc-hud">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
           <div className="relative w-full sm:w-64" data-tour="proc-search">
             <label htmlFor="proc-search-input" className="sr-only">Search SKU or Date</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
@@ -83,6 +155,18 @@ export default function ProcurementView() {
               className="input-field text-xs h-9 bg-slate-900 border-slate-700"
             />
           </div>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearCurrentFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-blue-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
 
           <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-lg border border-white/10" data-tour="proc-subtabs">
             <button
@@ -122,12 +206,21 @@ export default function ProcurementView() {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-white/10">
                 <tr>
-                  <th className="py-3 px-4">#</th>
-                  <th className="py-3 px-4">Arrival Date</th>
-                  <th className="py-3 px-4" data-tour="proc-col-sku">Style SKU</th>
-                  <th className="py-3 px-4 text-center" data-tour="proc-col-qty">Inward Inventory</th>
-                  <th className="py-3 px-4 text-right" data-tour="proc-col-rate">Purchase Rate</th>
-                  <th className="py-3 px-4 text-right" data-tour="proc-col-value">Total Batch Value</th>
+                  <SortableHeader label="#" columnKey="id" sortable {...batchHeaderProps} />
+                  <SortableHeader label="Arrival Date" columnKey="date" sortable {...batchHeaderProps} />
+                  <SortableHeader label="Style SKU" columnKey="style_no" sortable filterable {...batchHeaderProps}
+                    activeFilterValues={batchControls.columnFilters['style_no']}
+                    extraProps={{ 'data-tour': 'proc-col-sku' }}
+                  />
+                  <SortableHeader label="Inward Inventory" columnKey="inventory" sortable align="center" {...batchHeaderProps}
+                    extraProps={{ 'data-tour': 'proc-col-qty' }}
+                  />
+                  <SortableHeader label="Purchase Rate" columnKey="purchase_rate" sortable align="right" {...batchHeaderProps}
+                    extraProps={{ 'data-tour': 'proc-col-rate' }}
+                  />
+                  <SortableHeader label="Total Batch Value" columnKey="total_value" sortable align="right" {...batchHeaderProps}
+                    extraProps={{ 'data-tour': 'proc-col-value' }}
+                  />
                   <th className="py-3 px-4 text-center" data-tour="proc-col-actions">Actions</th>
                 </tr>
               </thead>
@@ -186,15 +279,15 @@ export default function ProcurementView() {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-white/10">
                 <tr>
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4 text-center">Distinct Styles</th>
-                  <th className="py-3 px-4 text-center">Total Inward Units</th>
-                  <th className="py-3 px-4 text-right">Daily Gross Procurement</th>
-                  <th className="py-3 px-4 text-right">Avg Purchase Rate</th>
+                  <SortableHeader label="Date" columnKey="date" sortable {...dailyHeaderProps} />
+                  <SortableHeader label="Distinct Styles" columnKey="style_count" sortable align="center" {...dailyHeaderProps} />
+                  <SortableHeader label="Total Inward Units" columnKey="total_units" sortable align="center" {...dailyHeaderProps} />
+                  <SortableHeader label="Daily Gross Procurement" columnKey="daily_gross_total" sortable align="right" {...dailyHeaderProps} />
+                  <SortableHeader label="Avg Purchase Rate" columnKey="avg_purchase_rate" sortable align="right" {...dailyHeaderProps} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {dailySummary.map((d) => (
+                {filteredDaily.map((d) => (
                   <tr key={d.date} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-4 font-bold text-white font-mono">{d.date}</td>
                     <td className="py-3 px-4 text-center">{d.style_count}</td>
@@ -204,15 +297,15 @@ export default function ProcurementView() {
                   </tr>
                 ))}
               </tbody>
-              {dailySummary.length > 0 && (() => {
-                const totalUnits = dailySummary.reduce((a, d) => a + (d.total_units || 0), 0);
-                const totalGross = dailySummary.reduce((a, d) => a + (d.daily_gross_total || 0), 0);
+              {filteredDaily.length > 0 && (() => {
+                const totalUnits = filteredDaily.reduce((a, d) => a + (d.total_units || 0), 0);
+                const totalGross = filteredDaily.reduce((a, d) => a + (d.daily_gross_total || 0), 0);
                 const avgRate = totalUnits > 0 ? totalGross / totalUnits : 0;
                 return (
                   <tfoot className="bg-slate-900 border-t-2 border-slate-700 font-bold text-white">
                     <tr>
                       <td className="py-3 px-4 font-mono text-xs text-blue-400">TOTAL</td>
-                      <td className="py-3 px-4 text-center text-slate-300 text-xs">{dailySummary.length} Days</td>
+                      <td className="py-3 px-4 text-center text-slate-300 text-xs">{filteredDaily.length} Days</td>
                       <td className="py-3 px-4 text-center font-bold text-white text-xs">{totalUnits}</td>
                       <td className="py-3 px-4 text-right font-bold text-emerald-400 font-mono text-xs">{formatCurrency(totalGross)}</td>
                       <td className="py-3 px-4 text-right font-mono text-xs text-slate-300">{formatCurrency(avgRate)} (Avg)</td>

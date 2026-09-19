@@ -4,6 +4,21 @@ import { api } from '../services/api';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { SalesEditModal } from '../modals/EditModals';
 import { formatCurrency } from '../utils/formatters';
+import useTableControls from '../utils/useTableControls';
+import SortableHeader from '../components/SortableHeader';
+
+const COLUMNS = [
+  { key: 'sl_no', sortable: true, filterable: true },
+  { key: 'date', sortable: true, filterable: true },
+  { key: 'style_no', sortable: true, filterable: true },
+  { key: 'quantity_sold', sortable: true, filterable: true },
+  { key: 'selling_price', sortable: true, filterable: true },
+  { key: 'total_revenue', sortable: true, filterable: true },
+  { key: 'cogs', sortable: true, filterable: true },
+  { key: 'profit', sortable: true, filterable: true },
+  { key: 'profit_margin', sortable: true, filterable: true, getValue: (r) => (r.profit_margin * 100).toFixed(1) + '%' },
+  { key: 'reference', sortable: true, filterable: true, getValue: (r) => r.reference || 'Sale' },
+];
 
 export default function SalesView({ onRecordSaleClick, refreshTrigger }) {
   const [sales, setSales] = useState([]);
@@ -66,11 +81,21 @@ export default function SalesView({ onRecordSaleClick, refreshTrigger }) {
     }
   };
 
-  const filtered = sales.filter((s) =>
+  // Text search filter (existing behavior)
+  const searchFiltered = sales.filter((s) =>
     s.style_no.toLowerCase().includes(search.toLowerCase()) ||
     s.date.includes(search) ||
     (s.reference && s.reference.toLowerCase().includes(search.toLowerCase()))
   );
+
+  // Column-level sort & filter
+  const {
+    sortConfig, columnFilters, requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, toggleFilterValue, selectOnlyFilter, selectAllFilter, deselectAllFilter,
+    clearFilter, clearAllFilters, activeFilterCount, processedData,
+  } = useTableControls({ data: searchFiltered, columns: COLUMNS });
+
+  const filtered = processedData;
 
   const handleExcelExport = () => {
     const formatted = filtered.map((s) => ({
@@ -92,11 +117,18 @@ export default function SalesView({ onRecordSaleClick, refreshTrigger }) {
     exportToCSV(filtered, `sales_orders_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
+  // Shared props for SortableHeader
+  const sharedHeaderProps = {
+    sortConfig, columnFilters, onSort: requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, onToggleFilter: toggleFilterValue, onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter, onDeselectAll: deselectAllFilter, onClearFilter: clearFilter,
+  };
+
   return (
     <div className="space-y-4">
       {/* Top Controls Bar */}
       <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
           <div className="relative w-full sm:w-72" data-tour="sales-search">
             <label htmlFor="sales-search-input" className="sr-only">Search sales orders</label>
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
@@ -111,6 +143,18 @@ export default function SalesView({ onRecordSaleClick, refreshTrigger }) {
               className="input-field text-xs h-9 bg-slate-900 border-slate-700"
             />
           </div>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-blue-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -142,16 +186,30 @@ export default function SalesView({ onRecordSaleClick, refreshTrigger }) {
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-slate-800">
               <tr>
-                <th className="py-3 px-4">#</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4" data-tour="sales-col-sku">Style SKU</th>
-                <th className="py-3 px-4 text-center">Qty</th>
-                <th className="py-3 px-4 text-right">Selling Price</th>
-                <th className="py-3 px-4 text-right" data-tour="sales-col-revenue">Total Revenue</th>
-                <th className="py-3 px-4 text-right" data-tour="sales-col-cogs">COGS</th>
-                <th className="py-3 px-4 text-right" data-tour="sales-col-profit">Gross Profit</th>
-                <th className="py-3 px-4 text-right" data-tour="sales-col-margin">Margin %</th>
-                <th className="py-3 px-4" data-tour="sales-col-ref">Reference</th>
+                <SortableHeader label="#" columnKey="sl_no" sortable {...sharedHeaderProps} />
+                <SortableHeader label="Date" columnKey="date" sortable {...sharedHeaderProps} />
+                <SortableHeader label="Style SKU" columnKey="style_no" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['style_no']}
+                  extraProps={{ 'data-tour': 'sales-col-sku' }}
+                />
+                <SortableHeader label="Qty" columnKey="quantity_sold" sortable align="center" {...sharedHeaderProps} />
+                <SortableHeader label="Selling Price" columnKey="selling_price" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Total Revenue" columnKey="total_revenue" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'sales-col-revenue' }}
+                />
+                <SortableHeader label="COGS" columnKey="cogs" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'sales-col-cogs' }}
+                />
+                <SortableHeader label="Gross Profit" columnKey="profit" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'sales-col-profit' }}
+                />
+                <SortableHeader label="Margin %" columnKey="profit_margin" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'sales-col-margin' }}
+                />
+                <SortableHeader label="Reference" columnKey="reference" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['reference']}
+                  extraProps={{ 'data-tour': 'sales-col-ref' }}
+                />
                 <th className="py-3 px-4 text-center" data-tour="sales-col-actions">Actions</th>
               </tr>
             </thead>

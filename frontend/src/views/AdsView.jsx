@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Download, Filter } from 'lucide-react';
 import { api } from '../services/api';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { AdEditModal } from '../modals/EditModals';
 import { formatCurrency } from '../utils/formatters';
+import useTableControls from '../utils/useTableControls';
+import SortableHeader from '../components/SortableHeader';
+
+const COLUMNS = [
+  { key: 'date', sortable: true, filterable: true },
+  { key: 'platform', sortable: true, filterable: true },
+  { key: 'amount', sortable: true, filterable: true },
+  { key: 'notes', sortable: true, filterable: true, getValue: (r) => r.notes || '—' },
+];
 
 export default function AdsView() {
   const [ads, setAds] = useState([]);
@@ -60,30 +69,59 @@ export default function AdsView() {
     }
   };
 
-  const filtered = ads.filter((a) =>
+  const searchFiltered = ads.filter((a) =>
     a.platform.toLowerCase().includes(search.toLowerCase()) ||
     a.date.includes(search) ||
     (a.notes && a.notes.toLowerCase().includes(search.toLowerCase()))
   );
+
+  // Column sort/filter
+  const {
+    sortConfig, columnFilters, requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, toggleFilterValue, selectOnlyFilter, selectAllFilter, deselectAllFilter,
+    clearFilter, clearAllFilters, activeFilterCount, processedData,
+  } = useTableControls({ data: searchFiltered, columns: COLUMNS });
+
+  const filtered = processedData;
+
+  const sharedHeaderProps = {
+    sortConfig, columnFilters, onSort: requestSort, clearSort, getUniqueValues, getValueCounts,
+    isFilterActive, onToggleFilter: toggleFilterValue, onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter, onDeselectAll: deselectAllFilter, onClearFilter: clearFilter,
+  };
 
   return (
     <div className="space-y-4">
 
       {/* Control Bar */}
       <div className="glass-panel p-4 flex flex-col sm:flex-row items-center justify-between gap-3" data-tour="ads-hud">
-        <div className="relative w-full sm:w-64" data-tour="ads-search">
-          <label htmlFor="ads-search-input" className="sr-only">Search campaign or platform</label>
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
-          <input
-            id="ads-search-input"
-            name="ads_search"
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search campaign or platform..."
-            style={{ paddingLeft: '2.5rem' }}
-            className="input-field text-xs h-9 bg-slate-900 border-slate-700"
-          />
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+          <div className="relative w-full sm:w-64" data-tour="ads-search">
+            <label htmlFor="ads-search-input" className="sr-only">Search campaign or platform</label>
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+            <input
+              id="ads-search-input"
+              name="ads_search"
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search campaign or platform..."
+              style={{ paddingLeft: '2.5rem' }}
+              className="input-field text-xs h-9 bg-slate-900 border-slate-700"
+            />
+          </div>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-blue-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -109,10 +147,17 @@ export default function AdsView() {
             <thead className="bg-slate-900/90 text-slate-400 font-semibold border-b border-white/10">
               <tr>
                 <th className="py-3 px-4 text-center">Sl. No.</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4" data-tour="ads-col-platform">Platform Channel</th>
-                <th className="py-3 px-4 text-right" data-tour="ads-col-amount">Amount ($)</th>
-                <th className="py-3 px-4" data-tour="ads-col-notes">Campaign Notes</th>
+                <SortableHeader label="Date" columnKey="date" sortable {...sharedHeaderProps} />
+                <SortableHeader label="Platform Channel" columnKey="platform" sortable filterable {...sharedHeaderProps}
+                  activeFilterValues={columnFilters['platform']}
+                  extraProps={{ 'data-tour': 'ads-col-platform' }}
+                />
+                <SortableHeader label="Amount ($)" columnKey="amount" sortable align="right" {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'ads-col-amount' }}
+                />
+                <SortableHeader label="Campaign Notes" columnKey="notes" sortable {...sharedHeaderProps}
+                  extraProps={{ 'data-tour': 'ads-col-notes' }}
+                />
                 <th className="py-3 px-4 text-center" data-tour="ads-col-actions">Actions</th>
               </tr>
             </thead>
