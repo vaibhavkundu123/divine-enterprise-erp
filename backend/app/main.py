@@ -75,7 +75,7 @@ def health_check():
         "status": "healthy",
         "service": "enterprise-operations-platform",
         "timestamp": datetime.now().isoformat(),
-        "version": "2.0.0",
+        "version": "2.4.0",
     }
 
 # Mount static frontend build if available
@@ -89,4 +89,11 @@ if frontend_dist.exists():
         potential_file = frontend_dist / full_path
         if full_path and potential_file.exists() and potential_file.is_file():
             return FileResponse(potential_file)
-        return FileResponse(frontend_dist / "index.html")
+        return FileResponse(
+            frontend_dist / "index.html",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
+            },
+        )

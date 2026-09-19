@@ -19,15 +19,73 @@ import InteractiveTour from './components/InteractiveTour';
 import { api } from './services/api';
 import { exportMasterWorkbook } from './utils/exportUtils';
 
+const VALID_TABS = [
+  'dashboard',
+  'analytics',
+  'audit',
+  'status',
+  'sales',
+  'stock',
+  'procurement',
+  'rto',
+  'returns',
+  'exchanges',
+  'ads',
+  'bank',
+  'tasks',
+];
+
 export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     try {
+      // 1. Check URL query param (?tab=sales)
       const params = new URLSearchParams(window.location.search);
-      if (params.get('tab')) return params.get('tab');
+      const queryTab = params.get('tab');
+      if (queryTab && VALID_TABS.includes(queryTab)) return queryTab;
+
+      // 2. Check URL hash (#sales)
+      const hashTab = window.location.hash.replace(/^#/, '');
+      if (hashTab && VALID_TABS.includes(hashTab)) return hashTab;
+
+      // 3. Check persistent localStorage
+      const storedTab = localStorage.getItem('divine_active_tab');
+      if (storedTab && VALID_TABS.includes(storedTab)) return storedTab;
+
+      // 4. Status route fallback
       if (window.location.pathname.includes('status')) return 'status';
     } catch (_) {}
     return 'dashboard';
   });
+
+  // Persist activeTab across browser page refreshes and keep URL query in sync
+  useEffect(() => {
+    try {
+      if (activeTab && VALID_TABS.includes(activeTab)) {
+        localStorage.setItem('divine_active_tab', activeTab);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('tab') !== activeTab) {
+          url.searchParams.set('tab', activeTab);
+          window.history.replaceState(null, '', url.toString());
+        }
+      }
+    } catch (_) {}
+  }, [activeTab]);
+
+  // Handle browser Back / Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const queryTab = params.get('tab');
+        if (queryTab && VALID_TABS.includes(queryTab)) {
+          setActiveTab(queryTab);
+        }
+      } catch (_) {}
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [kpis, setKpis] = useState(null);
   const [copilotInsights, setCopilotInsights] = useState([]);
@@ -38,6 +96,15 @@ export default function App() {
   const [isRecordSaleOpen, setIsRecordSaleOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [isMasterExporting, setIsMasterExporting] = useState(false);
+  const [salesRefreshTrigger, setSalesRefreshTrigger] = useState(0);
+
+  const handleSaleSuccess = (newSale) => {
+    const slNo = newSale?.sl_no ? ` #${newSale.sl_no}` : '';
+    showToast(`Sale${slNo} dispatched & recorded in master ledger.`);
+    loadDashboardData();
+    setSalesRefreshTrigger((prev) => prev + 1);
+    window.dispatchEvent(new CustomEvent('divine-sale-created', { detail: newSale }));
+  };
 
   // Interactive Tour & Playable Manual State
   const [isTourOpen, setIsTourOpen] = useState(false);
@@ -159,7 +226,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] flex text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
+    <div className="h-screen bg-[#090d16] flex text-slate-100 antialiased selection:bg-blue-600 selection:text-white pt-2.5 overflow-hidden">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 z-50 glass-panel px-4 py-3 border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-2xl flex items-center gap-2 animate-fade-in bg-slate-900/95 backdrop-blur-md">
@@ -183,7 +250,7 @@ export default function App() {
       />
 
       {/* Main Viewport Container */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         {/* Top Command Bar HUD */}
         <TopBar
           activeTab={activeTab}
@@ -219,10 +286,15 @@ export default function App() {
           )}
 
           {activeTab === 'sales' && (
-            <SalesView onRecordSaleClick={() => setIsRecordSaleOpen(true)} />
+            <SalesView
+              onRecordSaleClick={() => setIsRecordSaleOpen(true)}
+              refreshTrigger={salesRefreshTrigger}
+            />
           )}
 
-          {activeTab === 'stock' && <StockView />}
+          {activeTab === 'stock' && (
+            <StockView refreshTrigger={salesRefreshTrigger} />
+          )}
 
           {activeTab === 'rto' && <RTOView />}
 
@@ -250,10 +322,7 @@ export default function App() {
       <GlobalRecordSaleModal
         isOpen={isRecordSaleOpen}
         onClose={() => setIsRecordSaleOpen(false)}
-        onSuccess={() => {
-          showToast('Sale dispatched and recorded in master ledger.');
-          loadDashboardData();
-        }}
+        onSuccess={handleSaleSuccess}
         styleCatalog={styleCatalog}
       />
 

@@ -70,7 +70,7 @@ export default function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-30 h-14 bg-[#090d16]/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-30 h-14 shrink-0 bg-[#090d16]/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 flex items-center justify-between gap-4">
       {/* Left: Mobile hamburger & Breadcrumbs */}
       <div className="flex items-center gap-3 min-w-0">
         <button

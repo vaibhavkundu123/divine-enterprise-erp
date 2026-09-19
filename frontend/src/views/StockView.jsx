@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { formatCurrency, formatNumber } from '../utils/formatters';
 
-export default function StockView() {
+export default function StockView({ refreshTrigger }) {
   const [stock, setStock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -20,6 +20,14 @@ export default function StockView() {
 
   useEffect(() => {
     loadStock();
+  }, [refreshTrigger]);
+
+  useEffect(() => {
+    const handleSaleCreated = () => {
+      loadStock();
+    };
+    window.addEventListener('divine-sale-created', handleSaleCreated);
+    return () => window.removeEventListener('divine-sale-created', handleSaleCreated);
   }, []);
 
   const filtered = stock.filter((item) => {

@@ -421,6 +421,7 @@ export default function BankView() {
       {/* Edit Transaction Modal */}
       {editingTx && (
         <BankEditModal
+          tx={editingTx}
           transaction={editingTx}
           isOpen={true}
           onClose={() => setEditingTx(null)}

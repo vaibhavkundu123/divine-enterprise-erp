@@ -5,23 +5,56 @@ import { exportToExcel, exportToCSV } from '../utils/exportUtils';
 import { SalesEditModal } from '../modals/EditModals';
 import { formatCurrency } from '../utils/formatters';
 
-export default function SalesView({ onRecordSaleClick }) {
+export default function SalesView({ onRecordSaleClick, refreshTrigger }) {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editingOrder, setEditingOrder] = useState(null);
+  const [newSaleId, setNewSaleId] = useState(null);
 
   const loadSales = () => {
     setLoading(true);
-    api.getSales()
-      .then((data) => setSales(data))
+    return api.getSales()
+      .then((data) => {
+        setSales(data);
+        return data;
+      })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   };
 
+  // Reload when parent triggers a refresh (e.g. from GlobalRecordSaleModal)
   useEffect(() => {
     loadSales();
+  }, [refreshTrigger]);
+
+  // Global event listener for sales created anywhere across the app
+  useEffect(() => {
+    const handleSaleCreated = (event) => {
+      const created = event.detail;
+      if (created?.id) {
+        setNewSaleId(created.id);
+        setTimeout(() => setNewSaleId(null), 6000);
+      }
+      loadSales();
+    };
+
+    window.addEventListener('divine-sale-created', handleSaleCreated);
+    return () => window.removeEventListener('divine-sale-created', handleSaleCreated);
   }, []);
+
+  // Smooth scroll to newly created sale
+  useEffect(() => {
+    if (newSaleId) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`sale-row-${newSaleId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [newSaleId, sales]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this sales order and restore units back to inventory?')) return;
@@ -50,7 +83,7 @@ export default function SalesView({ onRecordSaleClick }) {
       'Cost of Goods Sold ($)': s.cogs,
       'Profit ($)': s.profit,
       'Profit Margin (%)': (s.profit_margin * 100).toFixed(2) + '%',
-      Reference: s.reference || 'Direct Sale',
+      Reference: s.reference || 'Sale',
     }));
     exportToExcel(formatted, `Sales_Orders_${new Date().toISOString().split('T')[0]}.xlsx`, 'Sales');
   };
@@ -134,8 +167,17 @@ export default function SalesView({ onRecordSaleClick }) {
               ) : (
                 filtered.map((s, idx) => {
                   const marginPct = (s.profit_margin * 100).toFixed(1);
+                  const isNew = s.id === newSaleId;
                   return (
-                    <tr key={s.id} className="hover:bg-white/5 transition-colors">
+                    <tr
+                      key={s.id}
+                      id={`sale-row-${s.id}`}
+                      className={`transition-all duration-700 ${
+                        isNew
+                          ? 'bg-emerald-500/20 border-l-4 border-emerald-400 font-medium'
+                          : 'hover:bg-white/5'
+                      }`}
+                    >
                       <td className="py-3 px-4 font-mono text-slate-400">{s.sl_no}</td>
                       <td className="py-3 px-4 whitespace-nowrap">{s.date}</td>
                       <td className="py-3 px-4 font-bold text-white uppercase">{s.style_no}</td>
@@ -164,7 +206,7 @@ export default function SalesView({ onRecordSaleClick }) {
                           {marginPct}%
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-slate-400">{s.reference || 'Direct'}</td>
+                      <td className="py-3 px-4 text-slate-400">{s.reference || 'Sale'}</td>
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
                           <button
@@ -229,6 +271,7 @@ export default function SalesView({ onRecordSaleClick }) {
       {editingOrder && (
         <SalesEditModal
           order={editingOrder}
+          isOpen={true}
           onClose={() => setEditingOrder(null)}
           onSuccess={() => {
             setEditingOrder(null);

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Download, Trash2 } from 'lucide-react';
+import { Plus, Search, Download, Trash2, Edit2 } from 'lucide-react';
 import { api } from '../services/api';
 import { exportToExcel } from '../utils/exportUtils';
 import { formatCurrency } from '../utils/formatters';
+import { ProcurementEditModal } from '../modals/EditModals';
 
 export default function ProcurementView() {
   const [batches, setBatches] = useState([]);
@@ -10,6 +11,7 @@ export default function ProcurementView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingBatch, setEditingBatch] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState('batches');
 
   // New batch form
@@ -143,10 +145,15 @@ export default function ProcurementView() {
                       <td className="py-3 px-4 text-center font-semibold text-white">{b.inventory}</td>
                       <td className="py-3 px-4 text-right font-mono">{formatCurrency(b.purchase_rate)}</td>
                       <td className="py-3 px-4 text-right font-semibold text-white font-mono">{formatCurrency(b.total_value)}</td>
-                      <td className="py-3 px-4 text-center">
-                        <button onClick={() => handleDelete(b.id)} className="p-1 text-slate-400 hover:text-rose-400" aria-label="Delete batch">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => setEditingBatch(b)} className="p-1 text-slate-400 hover:text-white" aria-label="Edit batch">
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDelete(b.id)} className="p-1 text-slate-400 hover:text-rose-400" aria-label="Delete batch">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -249,6 +256,14 @@ export default function ProcurementView() {
           </div>
         </div>
       )}
+
+      {/* Procurement Batch Edit Modal */}
+      <ProcurementEditModal
+        batch={editingBatch}
+        isOpen={!!editingBatch}
+        onClose={() => setEditingBatch(null)}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

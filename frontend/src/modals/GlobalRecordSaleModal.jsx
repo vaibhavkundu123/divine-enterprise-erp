@@ -6,10 +6,10 @@ import { formatCurrency, formatPercent } from '../utils/formatters';
 export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styleCatalog = [] }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [styleNo, setStyleNo] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState('1');
   const [sellingPrice, setSellingPrice] = useState('');
   const [totalRevenue, setTotalRevenue] = useState('');
-  const [reference, setReference] = useState('Direct Sale');
+  const [reference, setReference] = useState('Sale');
 
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -24,31 +24,34 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
     const cost = selectedStyle.unit_cost;
     const price = Math.round(cost * (1 + pct / 100) * 100) / 100;
     setSellingPrice(price.toString());
-    setTotalRevenue((price * quantity).toFixed(2));
+    const q = parseInt(quantity, 10) || 1;
+    setTotalRevenue((price * q).toFixed(2));
   };
 
   // Synchronize price & revenue
   const handlePriceChange = (val) => {
     setSellingPrice(val);
     const num = parseFloat(val);
-    if (!isNaN(num) && quantity > 0) {
-      setTotalRevenue((num * quantity).toFixed(2));
+    const q = parseInt(quantity, 10);
+    if (!isNaN(num) && num > 0 && !isNaN(q) && q > 0) {
+      setTotalRevenue((num * q).toFixed(2));
     }
   };
 
   const handleRevenueChange = (val) => {
     setTotalRevenue(val);
     const num = parseFloat(val);
-    if (!isNaN(num) && quantity > 0) {
-      setSellingPrice((num / quantity).toFixed(2));
+    const q = parseInt(quantity, 10);
+    if (!isNaN(num) && num > 0 && !isNaN(q) && q > 0) {
+      setSellingPrice((num / q).toFixed(2));
     }
   };
 
   const handleQuantityChange = (val) => {
-    const q = parseInt(val, 10) || 1;
-    setQuantity(q);
+    setQuantity(val);
+    const q = parseInt(val, 10);
     const p = parseFloat(sellingPrice);
-    if (!isNaN(p)) {
+    if (!isNaN(q) && q > 0 && !isNaN(p) && p > 0) {
       setTotalRevenue((p * q).toFixed(2));
     }
   };
@@ -59,7 +62,7 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
       setPreview(null);
       return;
     }
-    const q = quantity || 1;
+    const q = parseInt(quantity, 10) || 1;
     const p = parseFloat(sellingPrice);
     const r = parseFloat(totalRevenue);
 
@@ -83,6 +86,11 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
       setError('Please select or enter a Product Style No.');
       return;
     }
+    const q = parseInt(quantity, 10);
+    if (isNaN(q) || q < 1) {
+      setError('Please enter a valid quantity of at least 1.');
+      return;
+    }
     const p = parseFloat(sellingPrice);
     const r = parseFloat(totalRevenue);
     if (!p && !r) {
@@ -94,15 +102,15 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
     setError(null);
 
     try {
-      await api.createSale({
+      const createdSale = await api.createSale({
         date,
         style_no: styleNo.trim(),
-        quantity_sold: quantity,
+        quantity_sold: q,
         selling_price: p > 0 ? p : undefined,
         total_revenue: r > 0 ? r : undefined,
-        reference: reference || 'Direct Sale',
+        reference: reference || 'Sale',
       });
-      onSuccess && onSuccess();
+      onSuccess && onSuccess(createdSale);
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to record sales order.');
@@ -164,6 +172,11 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
                 min="1"
                 value={quantity}
                 onChange={(e) => handleQuantityChange(e.target.value)}
+                onBlur={() => {
+                  if (!quantity || parseInt(quantity, 10) < 1) {
+                    handleQuantityChange('1');
+                  }
+                }}
                 required
                 className="input-field"
               />
@@ -262,7 +275,7 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
               type="text"
               value={reference}
               onChange={(e) => setReference(e.target.value)}
-              placeholder="e.g. Direct Sale, Shopify #1042"
+              placeholder="e.g. Sale, Shopify #1042"
               className="input-field"
             />
           </div>

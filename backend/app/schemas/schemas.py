@@ -34,7 +34,7 @@ class SalesOrderBase(BaseModel):
     quantity_sold: int = 1
     selling_price: Optional[float] = None
     total_revenue: Optional[float] = None
-    reference: Optional[str] = "Direct Sale"
+    reference: Optional[str] = "Sale"
 
 class SalesOrderCreate(SalesOrderBase):
     pass

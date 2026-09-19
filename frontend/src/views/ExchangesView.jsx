@@ -259,6 +259,7 @@ export default function ExchangesView() {
                 <th className="py-3 px-4 text-right">Reverse Fee</th>
                 <th className="py-3 px-4 text-right" data-tour="exchanges-col-settlement">Net Settlement</th>
                 <th className="py-3 px-4">Primary Reason</th>
+                <th className="py-3 px-4">Secondary Reason</th>
                 <th className="py-3 px-4">Reverse AWB</th>
                 <th className="py-3 px-4 text-center" data-tour="exchanges-col-status">Return Status</th>
                 <th className="py-3 px-4 text-center">Date Received</th>
@@ -270,11 +271,11 @@ export default function ExchangesView() {
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan="15" className="py-8 text-center text-slate-400">Loading exchanges...</td>
+                  <td colSpan="16" className="py-8 text-center text-slate-400">Loading exchanges...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="15" className="py-8 text-center text-slate-400">No exchange records found.</td>
+                  <td colSpan="16" className="py-8 text-center text-slate-400">No exchange records found.</td>
                 </tr>
               ) : (
                 filtered.map((e, idx) => (
@@ -288,6 +289,7 @@ export default function ExchangesView() {
                     <td className="py-3 px-4 text-right font-mono text-rose-300">{formatCurrency(e.reverse_fee)}</td>
                     <td className="py-3 px-4 text-right font-bold text-white font-mono">{formatCurrency(e.net_settlement)}</td>
                     <td className="py-3 px-4 text-slate-300 max-w-[130px] truncate" title={e.primary_reason}>{e.primary_reason || '—'}</td>
+                    <td className="py-3 px-4 text-slate-400 max-w-[130px] truncate" title={e.secondary_reason || '—'}>{e.secondary_reason || '—'}</td>
                     <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">{e.reverse_awb || '—'}</td>
                     <td className="py-3 px-4 text-center">{getReturnStatusPill(e.return_status)}</td>
                     <td className="py-3 px-4 text-center font-mono text-[11px] text-slate-400 whitespace-nowrap">

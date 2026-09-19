@@ -238,7 +238,7 @@ export const TAB_TOURS = {
           'Standardized uppercase formatting avoids duplicate records caused by lowercase typos.'
         ],
         tip: 'Consistent style code naming ensures seamless cross-referencing with factory procurement batches.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'right'
       },
       {
         selector: '[data-tour="sales-col-revenue"]',
@@ -253,7 +253,7 @@ export const TAB_TOURS = {
         ],
         formula: 'Total Revenue = Quantity Sold × Unit Selling Price',
         tip: 'For custom wholesale deals with special package pricing, input the exact total invoice amount.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'left'
       },
       {
         selector: '[data-tour="sales-col-cogs"], [data-tour="sales-col-profit"], [data-tour="sales-col-margin"]',
@@ -268,17 +268,17 @@ export const TAB_TOURS = {
         ],
         formula: 'Gross Profit = Total Revenue - COGS  |  Margin % = (Gross Profit ÷ Total Revenue) × 100',
         tip: 'Aim for gross profit margins above 25% to safely cover courier RTO fees and digital advertising costs.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'left'
       },
       {
         selector: '[data-tour="sales-col-ref"]',
         badge: 'SALES ORIGIN',
         title: 'Customer Reference & Sales Channel',
-        description: 'Identifies the originating sales channel (Direct Sale, Wholesale, Shopify, Meesho, Amazon) or custom customer order reference number.',
+        description: 'Identifies the originating sales channel (Sale, Wholesale, Shopify, Meesho, Amazon) or custom customer order reference number.',
         details: [
           'Enables channel-specific profitability attribution and courier COD reconciliation.',
           'Provides traceability when matching courier COD remittance bank statements against order dispatches.',
-          'Defaults to "Direct Sale" if no external invoice number is entered.'
+          'Defaults to "Sale" if no external invoice number is entered.'
         ],
         tip: 'Enter the courier consignment number or platform order ID here for instant customer support lookups.',
         preferredPlacement: 'left'
@@ -369,7 +369,7 @@ export const TAB_TOURS = {
           'Serves as the supply foundation for Weighted Average Cost (WAC) calculations.'
         ],
         tip: 'Verify this column against factory delivery challans during physical receiving.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'right'
       },
       {
         selector: '[data-tour="stock-col-outflow"]',
@@ -382,7 +382,7 @@ export const TAB_TOURS = {
           'Restorative order deletions automatically reduce this count and return units to stock.'
         ],
         tip: 'Compare dispatched units against inward units to monitor historical sell-through rates.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'right'
       },
       {
         selector: '[data-tour="stock-col-restocked"]',
@@ -395,7 +395,7 @@ export const TAB_TOURS = {
           'Protects customers from receiving previously worn or damaged return garments.'
         ],
         tip: 'All restocks undergo physical warehouse verification before entering sellable stock.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'left'
       },
       {
         selector: '[data-tour="stock-col-hand"]',
@@ -409,7 +409,7 @@ export const TAB_TOURS = {
         ],
         formula: 'Usable Stock = Inward - Dispatched + Restocked',
         tip: 'Keep at least 15 units on-hand for star performer styles to buffer against shipping transit delays.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'left'
       },
       {
         selector: '[data-tour="stock-col-wac"]',
@@ -423,7 +423,7 @@ export const TAB_TOURS = {
         ],
         formula: 'WAC = Total Cumulative Procurement Value ÷ Total Inward Units',
         tip: 'WAC automatically adjusts whenever you log a new procurement batch with different purchase rates.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'left'
       },
       {
         selector: '[data-tour="stock-col-status"]',
@@ -510,7 +510,7 @@ export const TAB_TOURS = {
           'Helps identify courier delays when parcels stay in transit longer than 7 days.'
         ],
         tip: 'Scan courier barcode labels directly into the search box to locate parcels instantly.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'right'
       },
       {
         selector: '[data-tour="rto-col-status"]',
@@ -524,7 +524,7 @@ export const TAB_TOURS = {
           'Damaged (Rose): Box crushed or tampered; written off as inventory loss.'
         ],
         tip: 'Pulsing blue badges indicate parcels requiring immediate dock staff inspection.',
-        preferredPlacement: 'bottom'
+        preferredPlacement: 'left'
       },
       {
         selector: '[data-tour="rto-col-dock"]',

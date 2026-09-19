@@ -55,18 +55,35 @@ export default function InteractiveTour({
       const el = document.querySelector(selector);
       if (!el) return;
 
-      // Find actual scrollable ancestor container (e.g. App's main viewport div)
+      // 1. Horizontal visibility: scroll any horizontally scrollable container (e.g. table overflow-x-auto)
+      let hScroll = el.parentElement;
+      while (hScroll && hScroll !== document.body) {
+        const style = window.getComputedStyle(hScroll);
+        const ox = style.overflowX;
+        if ((ox === 'auto' || ox === 'scroll') && hScroll.scrollWidth > hScroll.clientWidth + 4) {
+          const elRect = el.getBoundingClientRect();
+          const hRect = hScroll.getBoundingClientRect();
+          if (elRect.left < hRect.left + 24 || elRect.right > hRect.right - 24) {
+            const targetScrollLeft = hScroll.scrollLeft + (elRect.left - hRect.left) - (hScroll.clientWidth / 2) + (elRect.width / 2);
+            hScroll.scrollTo({ left: Math.max(0, targetScrollLeft), behavior: 'smooth' });
+          }
+          break;
+        }
+        hScroll = hScroll.parentElement;
+      }
+
+      // 2. Vertical visibility: find actual main scrollable ancestor container (e.g. App's main viewport div)
       let scrollContainer = el.parentElement;
       while (scrollContainer && scrollContainer !== document.body) {
         const style = window.getComputedStyle(scrollContainer);
         const oy = style.overflowY;
-        if ((oy === 'auto' || oy === 'scroll') && scrollContainer.scrollHeight > scrollContainer.clientHeight) {
+        if ((oy === 'auto' || oy === 'scroll') && scrollContainer.scrollHeight > scrollContainer.clientHeight + 10) {
           break;
         }
         scrollContainer = scrollContainer.parentElement;
       }
       if (!scrollContainer || scrollContainer === document.body) {
-        scrollContainer = document.scrollingElement || document.documentElement;
+        scrollContainer = document.querySelector('.overflow-y-auto') || document.scrollingElement || document.documentElement;
       }
 
       const elemRect = el.getBoundingClientRect();
@@ -86,6 +103,10 @@ export default function InteractiveTour({
         // Element sits in lower portion of viewport so there is maximum clearance (~450-550px) ABOVE
         const desiredTopInViewport = Math.max(topBarSafe + 180, viewportH - elemHeight - 100);
         targetScrollTop = relativeTop - desiredTopInViewport;
+      } else if (preferredPlacement === 'left' || preferredPlacement === 'right') {
+        // Center vertically so side popover has balanced space above and below
+        const desiredTopInViewport = Math.max(topBarSafe + 20, Math.min((viewportH / 2) - (elemHeight / 2), viewportH - elemHeight - 80));
+        targetScrollTop = relativeTop - desiredTopInViewport;
       } else {
         // Preferred 'bottom': Element sits in upper portion so there is maximum clearance (~500-650px) BELOW
         const desiredTopInViewport = topBarSafe + 16;
@@ -104,7 +125,7 @@ export default function InteractiveTour({
     }
   }, []);
 
-  // Find target element(s) and compute union bounding rect with strict non-overlap geometry
+  // Find target element(s) and compute union bounding rect with strict 4-way non-overlap geometry
   const updateTargetPosition = useCallback(() => {
     if (!isOpen || !currentData?.selector) {
       setTargetRect(null);
@@ -149,64 +170,117 @@ export default function InteractiveTour({
       };
       setTargetRect(unionRect);
 
-      const popoverWidth = 430;
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
       const topBarSafe = 70; // safe top margin below navbar
       const gap = 14; // gap between target border and popover
+      const popoverWidth = Math.min(430, windowWidth - 32);
 
-      // Available vertical space in viewport
+      // Space available in all 4 directions around target
       const spaceBelow = windowHeight - unionRect.bottom - 16;
       const spaceAbove = unionRect.top - topBarSafe - 16;
+      const spaceLeft = unionRect.left - 16;
+      const spaceRight = windowWidth - unionRect.right - 16;
 
       const preferred = currentData.preferredPlacement || 'bottom';
       let placement = preferred;
 
-      // Smart placement selection based on actual real-time space
-      if (preferred === 'bottom') {
-        if (spaceBelow < 260 && spaceAbove > spaceBelow) {
-          placement = 'top';
-        } else {
+      // Smart 4-way placement selection based on actual real-time space
+      if (preferred === 'left') {
+        if (spaceLeft >= popoverWidth + gap) {
+          placement = 'left';
+        } else if (spaceRight >= popoverWidth + gap) {
+          placement = 'right';
+        } else if (spaceBelow >= 260) {
           placement = 'bottom';
+        } else {
+          placement = 'top';
+        }
+      } else if (preferred === 'right') {
+        if (spaceRight >= popoverWidth + gap) {
+          placement = 'right';
+        } else if (spaceLeft >= popoverWidth + gap) {
+          placement = 'left';
+        } else if (spaceBelow >= 260) {
+          placement = 'bottom';
+        } else {
+          placement = 'top';
+        }
+      } else if (preferred === 'bottom') {
+        if (spaceBelow >= 260) {
+          placement = 'bottom';
+        } else if (spaceAbove >= 260) {
+          placement = 'top';
+        } else if (spaceLeft >= popoverWidth + gap) {
+          placement = 'left';
+        } else if (spaceRight >= popoverWidth + gap) {
+          placement = 'right';
+        } else {
+          placement = spaceBelow >= spaceAbove ? 'bottom' : 'top';
         }
       } else if (preferred === 'top') {
-        if (spaceAbove < 260 && spaceBelow > spaceAbove) {
-          placement = 'bottom';
-        } else {
+        if (spaceAbove >= 260) {
           placement = 'top';
+        } else if (spaceBelow >= 260) {
+          placement = 'bottom';
+        } else if (spaceLeft >= popoverWidth + gap) {
+          placement = 'left';
+        } else if (spaceRight >= popoverWidth + gap) {
+          placement = 'right';
+        } else {
+          placement = spaceAbove >= spaceBelow ? 'top' : 'bottom';
         }
-      } else {
-        placement = spaceBelow >= spaceAbove ? 'bottom' : 'top';
       }
 
       let top = 0;
+      let left = 0;
       let maxHeight = 520;
+      let calculatedArrowOffset = 24;
 
       if (placement === 'bottom') {
         // STRICT INVARIANT: top is strictly below the target's bottom edge
         top = unionRect.bottom + gap;
-        // Available space below the popover top
         maxHeight = Math.max(200, windowHeight - top - 16);
-      } else {
+        const targetCenterX = unionRect.left + (unionRect.width / 2);
+        const idealLeft = targetCenterX - (popoverWidth / 2);
+        left = Math.max(16, Math.min(idealLeft, windowWidth - popoverWidth - 16));
+        calculatedArrowOffset = Math.max(28, Math.min(targetCenterX - left, popoverWidth - 28));
+      } else if (placement === 'top') {
         // STRICT INVARIANT: popover bottom is strictly above the target's top edge
         maxHeight = Math.max(200, unionRect.top - gap - topBarSafe);
         const popoverActualHeight = popoverRef.current
           ? Math.min(popoverRef.current.offsetHeight, maxHeight)
           : Math.min(460, maxHeight);
         top = Math.max(topBarSafe, unionRect.top - gap - popoverActualHeight);
+        const targetCenterX = unionRect.left + (unionRect.width / 2);
+        const idealLeft = targetCenterX - (popoverWidth / 2);
+        left = Math.max(16, Math.min(idealLeft, windowWidth - popoverWidth - 16));
+        calculatedArrowOffset = Math.max(28, Math.min(targetCenterX - left, popoverWidth - 28));
+      } else if (placement === 'left') {
+        // STRICT INVARIANT: popover right is strictly to the left of the target's left edge
+        left = Math.max(16, unionRect.left - gap - popoverWidth);
+        maxHeight = Math.max(200, windowHeight - topBarSafe - 24);
+        const popoverActualHeight = popoverRef.current
+          ? Math.min(popoverRef.current.offsetHeight, maxHeight)
+          : Math.min(460, maxHeight);
+        const targetCenterY = unionRect.top + (unionRect.height / 2);
+        top = Math.max(topBarSafe, Math.min(targetCenterY - (popoverActualHeight / 2), windowHeight - popoverActualHeight - 16));
+        calculatedArrowOffset = Math.max(28, Math.min(targetCenterY - top, popoverActualHeight - 28));
+      } else if (placement === 'right') {
+        // STRICT INVARIANT: popover left is strictly to the right of the target's right edge
+        left = Math.min(windowWidth - popoverWidth - 16, unionRect.right + gap);
+        maxHeight = Math.max(200, windowHeight - topBarSafe - 24);
+        const popoverActualHeight = popoverRef.current
+          ? Math.min(popoverRef.current.offsetHeight, maxHeight)
+          : Math.min(460, maxHeight);
+        const targetCenterY = unionRect.top + (unionRect.height / 2);
+        top = Math.max(topBarSafe, Math.min(targetCenterY - (popoverActualHeight / 2), windowHeight - popoverActualHeight - 16));
+        calculatedArrowOffset = Math.max(28, Math.min(targetCenterY - top, popoverActualHeight - 28));
       }
-
-      // Horizontal alignment: center on the target, clamped inside viewport
-      const targetCenterX = unionRect.left + (unionRect.width / 2);
-      const idealLeft = targetCenterX - (popoverWidth / 2);
-      const clampedLeft = Math.max(16, Math.min(idealLeft, windowWidth - popoverWidth - 16));
-
-      // Arrow offset along the popover edge, clamped safely inside rounded corners
-      const calculatedArrowOffset = Math.max(28, Math.min(targetCenterX - clampedLeft, popoverWidth - 28));
 
       setPopoverPos({
         top,
-        left: clampedLeft,
+        left,
         maxHeight,
         placement,
       });

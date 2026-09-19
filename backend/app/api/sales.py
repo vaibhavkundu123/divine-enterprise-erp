@@ -120,7 +120,7 @@ def create_sales_order(
         cogs=cogs,
         profit=profit,
         profit_margin=round(margin / 100.0, 4),  # store as decimal fraction for parity
-        reference=payload.reference or "Direct Sale",
+        reference=payload.reference or "Sale",
     )
     db.add(order)
     db.commit()

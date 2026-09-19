@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Undo2, Check, AlertTriangle, Download, Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
-import { ReturnsQCEditModal } from '../modals/EditModals';
+import { CustomerReturnEditModal } from '../modals/EditModals';
 import { formatCurrency } from '../utils/formatters';
 
 export default function ReturnsView() {
@@ -249,6 +249,7 @@ export default function ReturnsView() {
                 <th className="py-3 px-4 text-right">Refund Amount</th>
                 <th className="py-3 px-4 text-right">Reverse Fee</th>
                 <th className="py-3 px-4" data-tour="returns-col-reason">Primary Reason</th>
+                <th className="py-3 px-4">Secondary Reason</th>
                 <th className="py-3 px-4">Reverse AWB</th>
                 <th className="py-3 px-4 text-center" data-tour="returns-col-status">Status</th>
                 <th className="py-3 px-4 text-center">Date Received</th>
@@ -260,11 +261,11 @@ export default function ReturnsView() {
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan="13" className="py-8 text-center text-slate-400">Loading customer returns...</td>
+                  <td colSpan="14" className="py-8 text-center text-slate-400">Loading customer returns...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="13" className="py-8 text-center text-slate-400">No returns matching filter.</td>
+                  <td colSpan="14" className="py-8 text-center text-slate-400">No returns matching filter.</td>
                 </tr>
               ) : (
                 filtered.map((r, idx) => (
@@ -276,6 +277,7 @@ export default function ReturnsView() {
                     <td className="py-3 px-4 text-right font-mono">{formatCurrency(r.refund_amount)}</td>
                     <td className="py-3 px-4 text-right font-mono text-rose-300">{formatCurrency(r.reverse_fee)}</td>
                     <td className="py-3 px-4 text-slate-300 max-w-[140px] truncate" title={r.primary_reason}>{r.primary_reason}</td>
+                    <td className="py-3 px-4 text-slate-400 max-w-[140px] truncate" title={r.secondary_reason || '—'}>{r.secondary_reason || '—'}</td>
                     <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">{r.reverse_awb || '—'}</td>
                     <td className="py-3 px-4 text-center">{getStatusPill(r.status)}</td>
                     <td className="py-3 px-4 text-center font-mono text-[11px] text-slate-400 whitespace-nowrap">
@@ -472,7 +474,7 @@ export default function ReturnsView() {
       )}
 
       {qcModalReturn && (
-        <ReturnsQCEditModal
+        <CustomerReturnEditModal
           ret={qcModalReturn}
           isOpen={true}
           onClose={() => setQcModalReturn(null)}

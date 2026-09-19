@@ -251,7 +251,7 @@ def export_sales_inventory_workbook(db: Session, target_path: Optional[Path] = N
             s.cogs,
             f"=F{row_num}-G{row_num}",
             f"=IF(F{row_num}>0, H{row_num}/F{row_num}, 0)",
-            s.reference or "Direct Sale",
+            s.reference or "Sale",
         ])
         ws_sales.cell(row=row_num, column=4).number_format = INT_FORMAT
         ws_sales.cell(row=row_num, column=5).number_format = CURRENCY_FORMAT
