@@ -132,6 +132,7 @@ docker compose up -d --build
    - [Flow 9: System Health &amp; Multi-Subsystem Diagnostics](#flow-9-system-health--multi-subsystem-diagnostics)
    - [Flow 10: Zero-Cost 24/7 Remote Mobile Access](#flow-10-zero-cost-247-remote-mobile-access)
    - [Flow 11: Interactive Playable Manual &amp; System Tour (Dual-Tier)](#flow-11-interactive-playable-manual--system-tour-dual-tier)
+   - [Flow 12: Excel-Style Column Sorting &amp; Multi-Filter Engine (All Tables)](#flow-12-excel-style-column-sorting--multi-filter-engine-all-tables)
 7. [Financial Mathematics &amp; Calculation Engine (23 Formulas)](#-financial-mathematics--calculation-engine-23-formulas)
 8. [Divine AI Copilot Engine (5 Heuristic Rules)](#-divine-ai-copilot-engine-5-heuristic-rules)
 9. [Database Schema &amp; ORM Entities](#-database-schema--orm-entities)
@@ -457,6 +458,64 @@ graph LR
 
 ---
 
+### Flow 12: Excel-Style Column Sorting & Multi-Filter Engine (All Tables)
+
+Every tabular view across the platform features native, high-performance **Excel-grade AutoFilter and interactive sorting** across all data columns, bringing spreadsheet fluidity directly to the web HUD without compromising non-volatile relational database integrity:
+
+```mermaid
+graph TD
+    UserAction["Operator Action on Any Table Column"] --> Decision{"Click Target"}
+    Decision -->|Click Header Text| DirectSort["Direct Quick Sort\nAscending (▲) ➔ Descending (▼) ➔ None"]
+    Decision -->|Click Funnel Icon 🔽| OpenFilter["Excel AutoFilter Popover Menu\n(Full Column Controls)"]
+    
+    OpenFilter --> SortControls["Sort Controls\n• 🔼 Sort Ascending (A to Z / Low to High)\n• 🔽 Sort Descending (Z to A / High to Low)\n• 🔄 Clear Sort"]
+    OpenFilter --> QuickActions["Bulk Selection Actions\n• 'Select All' (Include all values)\n• 'Clear All' (Deselect all)\n• 'Reset' (Clear column filter)"]
+    OpenFilter --> SearchBox["Real-Time Search Input\nFilter checklist by typing"]
+    OpenFilter --> CheckboxList["Auto-Populated Value Checklist\n• (Select All) with indeterminate state\n• Unique values with exact count badges (e.g., '14')\n• ⚡ 'only' 1-click filter button on hover"]
+    
+    DirectSort --> TableEngine["Client-Side Presentation Engine\n(useTableControls.js Hook)"]
+    CheckboxList --> TableEngine
+    TableEngine --> Render["Instant Re-Render of Filtered Table\n• Multi-Column Stacking (AND Logic)\n• Real-Time Recalculation of Totals & Averages\n• Active Filter Badges ('Filters (N) ✕' Button)"]
+```
+
+#### Core Features & Capabilities:
+1. **Interactive Column-Level Sorting**:
+   - Every data column header can be clicked to cycle: `None ➔ Ascending ➔ Descending ➔ None`.
+   - Direction chevrons (`▲` / `▼`) provide instant visual state with high-contrast active blue indicator.
+   - Automatically handles numeric, currency, date, and string comparisons with correct type-aware algorithms.
+2. **Excel-Grade AutoFilter Dropdown**:
+   - **Integrated Sort Actions**: Ascending and Descending sort buttons directly inside the popover.
+   - **Live Value Search**: Instantly filter down large lists of unique SKUs, dates, statuses, or channels by typing.
+   - **(Select All) Support**: Checkbox reflects complete, empty, or indeterminate/partial selection state.
+   - **Exact Record Counts**: Displays how many rows match each value (e.g., `Style-101 (18)`).
+   - **1-Click "only" Hover Filter**: Hovering over any item displays an `only` link that immediately isolates that single value with one click.
+3. **Multi-Column Filtering (Stackable AND Logic)**:
+   - Operators can filter by multiple columns simultaneously (e.g., `Status = "In Transit"` AND `Style SKU = "DENIM-01"`).
+   - Filtered column headers highlight their funnel icon in bright blue with an active indicator badge.
+4. **1-Click "Filters (N) ✕" Toolbar Reset**:
+   - When one or more column filters are active, a glowing toolbar button appears displaying the active count and allowing all column filters to be cleared in a single click.
+5. **Dynamic Summary Footer Recalculation**:
+   - All table footers (e.g. Total Units, Average Cost, Gross Spend, Total Margin) automatically recompute in real time based only on the currently filtered/visible dataset.
+6. **Zero Data Mutation**:
+   - Sorting and filtering occur entirely in the client-side presentation layer; database records and background Excel/CSV synchronization remain 100% pristine and unaltered.
+
+#### Complete Table & Column Coverage Matrix (9 Tables, 82 Data Columns):
+
+| View / Ledger | Total Data Columns | All Sortable | All Filterable | Covered Column Keys |
+| :--- | :---: | :---: | :---: | :--- |
+| **Sales Order Ledger** | 10 | ✅ Yes | ✅ Yes | `sl_no`, `date`, `style_no`, `quantity_sold`, `selling_price`, `total_revenue`, `cogs`, `profit`, `profit_margin`, `reference` |
+| **Warehouse Stock Matrix** | 13 | ✅ Yes | ✅ Yes | `style_no`, `total_purchased`, `total_sold`, `exch_out`, `rto_restocked`, `cr_restocked`, `exch_restocked`, `stock_on_hand`, `unit_cost`, `stock_valuation`, `total_revenue`, `total_profit`, `status` |
+| **Procurement Batches** | 6 | ✅ Yes | ✅ Yes | `id`, `date`, `style_no`, `inventory`, `purchase_rate`, `total_value` |
+| **Procurement Daily Summary** | 5 | ✅ Yes | ✅ Yes | `date`, `style_count`, `total_units`, `daily_gross_total`, `avg_purchase_rate` |
+| **Bank Treasury Register** | 5 | ✅ Yes | ✅ Yes | `sl_no`, `date`, `type`, `amount`, `running_balance` |
+| **Courier RTO Pipeline** | 9 | ✅ Yes | ✅ Yes | `date`, `style_no`, `quantity`, `sale_price`, `courier_fee`, `tracking_no`, `status`, `received_date`, `restocked_date` |
+| **Customer Returns QC Hub** | 11 | ✅ Yes | ✅ Yes | `date`, `style_no`, `quantity`, `refund_amount`, `reverse_fee`, `primary_reason`, `secondary_reason`, `reverse_awb`, `status`, `received_date`, `restocked_date` |
+| **Item Exchanges Ledger** | 13 | ✅ Yes | ✅ Yes | `date`, `original_style`, `exchanged_style`, `quantity`, `standard_price`, `reverse_fee`, `net_settlement`, `primary_reason`, `secondary_reason`, `reverse_awb`, `return_status`, `received_date`, `restocked_date` |
+| **Marketing Ads Spend** | 4 | ✅ Yes | ✅ Yes | `date`, `platform`, `amount`, `notes` |
+| **Activity Audit Trail** | 6 | ✅ Yes | ✅ Yes | `timestamp`, `category`, `action`, `summary`, `source`, `status` |
+
+---
+
 ## 🧮 Financial Mathematics & Calculation Engine (23 Formulas)
 
 Every metric in Divine Enterprise ERP is governed by strict mathematical specifications implemented in [`backend/app/services/financial_engine.py`](<file:///d:/Business%20Website/backend/app/services/financial_engine.py>):
@@ -637,6 +696,7 @@ d:/Business Website/
 │       │   ├── Header.jsx              # Responsive header bar
 │       │   ├── InteractiveTour.jsx     # 11-stage spotlight tour & playable simulators HUD
 │       │   ├── Sidebar.jsx             # Responsive dockable sidebar with live badges & WAL indicator
+│       │   ├── SortableHeader.jsx      # Reusable interactive table header with sort indicators & Excel-style AutoFilter menu
 │       │   ├── TopBar.jsx              # Command HUD, sync trigger & master Excel export button
 │       │   └── TrendWaveforms.jsx      # Multi-horizon (7D, 30D, ALL) SVG financial charts
 │       ├── views/                      # 13 Modular Operational Views
@@ -661,7 +721,8 @@ d:/Business Website/
 │       └── utils/                      # Utilities & Operational Knowledge Base
 │           ├── exportUtils.js          # SheetJS client-side master Excel workbook generation
 │           ├── formatters.js           # Currency, numbers, and percentage formatting helpers
-│           └── tourSteps.js            # 11-stage master tour definitions & operational knowledge base
+│           ├── tourSteps.js            # 11-stage master tour definitions & operational knowledge base
+│           └── useTableControls.js     # Custom React hook managing multi-column filter sets, sorting & value counts
 │
 ├── data/                               # Standardized 3NF Flat CSV Ledgers & SQLite DB (Auto-synchronized)
 │   ├── app.db                          # Core SQLite relational database (WAL journal mode)
