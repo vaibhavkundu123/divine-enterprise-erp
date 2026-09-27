@@ -348,6 +348,7 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
     all_styles = sorted(list({p.style_no.strip() for p in proc_batches} | {s.style_no.strip() for s in sales}))
     total_usable_stock = 0
     total_warehouse_stock_valuation = 0.0
+    out_of_stock_styles: List[Dict[str, Any]] = []
     low_stock_styles: List[Dict[str, Any]] = []
 
     for st in all_styles:
@@ -364,7 +365,15 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
         total_usable_stock += st_usable
         total_warehouse_stock_valuation += st_val
 
-        if st_usable <= 5:
+        if st_usable <= 0:
+            out_of_stock_styles.append({
+                "style_no": st,
+                "stock_on_hand": st_usable,
+                "wac": st_wac,
+                "status": get_inventory_health_badge(st_usable),
+                "reorder_needed": max(10, p_units - st_usable),
+            })
+        elif st_usable <= LOW_STOCK_THRESHOLD:
             low_stock_styles.append({
                 "style_no": st,
                 "stock_on_hand": st_usable,
@@ -417,4 +426,6 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
         "bank_running_balance": round(current_bank_balance, 2),
         "low_stock_count": len(low_stock_styles),
         "low_stock_items": low_stock_styles,
+        "out_of_stock_count": len(out_of_stock_styles),
+        "out_of_stock_items": out_of_stock_styles,
     }

@@ -14,6 +14,8 @@ import AnalyticsView from './views/AnalyticsView';
 import AuditView from './views/AuditView';
 import TasksView from './views/TasksView';
 import StatusView from './views/StatusView';
+import BarcodeMasterView from './views/BarcodeMasterView';
+import MeeshoCatalogView from './views/MeeshoCatalogView';
 import GlobalRecordSaleModal from './modals/GlobalRecordSaleModal';
 import InteractiveTour from './components/InteractiveTour';
 import { api } from './services/api';
@@ -24,6 +26,9 @@ const VALID_TABS = [
   'analytics',
   'audit',
   'status',
+  'barcode_master',
+  'meesho_catalog',
+  'catalog',
   'sales',
   'stock',
   'procurement',
@@ -284,6 +289,10 @@ export default function App() {
               onStartTabTour={handleStartTabTour}
             />
           )}
+
+          {(activeTab === 'barcode_master' || activeTab === 'catalog') && <BarcodeMasterView />}
+
+          {activeTab === 'meesho_catalog' && <MeeshoCatalogView />}
 
           {activeTab === 'sales' && (
             <SalesView

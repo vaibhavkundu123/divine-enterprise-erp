@@ -1,0 +1,19 @@
+{
+  "type": "sales",
+  "records": [
+    {
+      "date": "2026-09-21",
+      "style_no": "DE26001G",
+      "quantity_sold": 2,
+      "selling_price": 295.0,
+      "reference": "Shopify #1099"
+    },
+    {
+      "date": "2026-09-21",
+      "style_no": "DE26003W",
+      "quantity_sold": 1,
+      "total_revenue": 340.0,
+      "reference": "Instagram DM"
+    }
+  ]
+}

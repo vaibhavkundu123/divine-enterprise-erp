@@ -138,4 +138,43 @@ export const api = {
 
   // System Health & Diagnostics
   getSystemStatus: () => request('/status'),
+
+  // Product Catalog & Barcode Master
+  getCatalog: (params = {}) => {
+    const clean = Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== ''));
+    const query = new URLSearchParams(clean).toString();
+    return request(`/catalog${query ? `?${query}` : ''}`);
+  },
+  getCatalogStats: () => request('/catalog/stats'),
+  lookupBarcode: (code) => request(`/catalog/barcode/${encodeURIComponent(code)}`),
+  createProduct: (data) => request('/catalog', { method: 'POST', body: JSON.stringify(data) }),
+  updateProduct: (id, data) => request(`/catalog/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  batchUpdateImages: (updates) => request('/catalog/batch-images', { method: 'POST', body: JSON.stringify({ updates }) }),
+  uploadProductImage: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/catalog/upload-image', {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Image upload failed');
+    }
+    return res.json();
+  },
+  importExcelCatalog: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch('/api/catalog/import/excel', {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Excel import failed');
+    }
+    return res.json();
+  },
 };
+

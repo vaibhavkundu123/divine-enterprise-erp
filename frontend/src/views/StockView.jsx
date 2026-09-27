@@ -66,7 +66,8 @@ export default function StockView({ refreshTrigger }) {
 
   const totalValuation = stock.reduce((sum, item) => sum + (item.stock_valuation || 0), 0);
   const totalUnitsOnHand = stock.reduce((sum, item) => sum + (item.stock_on_hand || 0), 0);
-  const lowStockCount = stock.filter((item) => item.status === 'Low Stock' || item.status === 'Out of Stock').length;
+  const outOfStockCount = stock.filter((item) => item.status === 'Out of Stock' || item.status === 'Over Sold').length;
+  const lowStockCount = stock.filter((item) => item.status === 'Low Stock').length;
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -135,11 +136,17 @@ export default function StockView({ refreshTrigger }) {
           <div className="text-[11px] text-slate-500 mt-0.5">Continuous WAC calculation</div>
         </div>
         <div className="glass-panel p-4">
-          <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Low / Out of Stock</div>
-          <div className={`text-xl sm:text-2xl font-extrabold font-mono mt-1 ${lowStockCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-            {lowStockCount} Styles
+          <div className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">Depleted & Low Stock</div>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className={`text-xl sm:text-2xl font-extrabold font-mono ${outOfStockCount > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
+              {outOfStockCount} <span className="text-xs font-sans font-semibold text-rose-300">Out</span>
+            </span>
+            <span className="text-slate-600 font-bold">•</span>
+            <span className={`text-xl sm:text-2xl font-extrabold font-mono ${lowStockCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {lowStockCount} <span className="text-xs font-sans font-semibold text-amber-300">Low</span>
+            </span>
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Threshold &le; 5 units</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">{outOfStockCount} out of stock • {lowStockCount} runway (&le; 5 units)</div>
         </div>
       </div>
 

@@ -738,10 +738,14 @@ export function CustomerReturnEditModal({ ret, returnItem, isOpen = true, onClos
             >
               <option value="Size Too Small / Fit Issue">Size Too Small / Fit Issue</option>
               <option value="Size Too Large / Fit Issue">Size Too Large / Fit Issue</option>
+              <option value="Have size / fit related issues">Have size / fit related issues</option>
               <option value="Color Not As Pictured">Color Not As Pictured</option>
               <option value="Fabric / Stitch Quality Defect">Fabric / Stitch Quality Defect</option>
+              <option value="Have other quality related issues">Have other quality related issues</option>
               <option value="Changed Mind / Buyer Remorse">Changed Mind / Buyer Remorse</option>
+              <option value="Don't need the product anymore">Don't need the product anymore</option>
               <option value="Incorrect Item Dispatched">Incorrect Item Dispatched</option>
+              <option value="Received wrong product (different color / size / product)">Received wrong product (different color / size / product)</option>
               <option value="Arrived Too Late">Arrived Too Late</option>
               <option value="Other">Other</option>
             </select>
@@ -1110,6 +1114,9 @@ export function ExchangeEditModal({ exchange, item, isOpen = true, onClose, onSu
               <option value="Color Preference">Color Preference</option>
               <option value="Style Change">Style Change</option>
               <option value="Fabric Quality Issue">Fabric Quality Issue</option>
+              <option value="Don't need the product anymore">Don't need the product anymore</option>
+              <option value="Received wrong product (different color / size / product)">Received wrong product (different color / size / product)</option>
+              <option value="Received defective product (stains / damaged / torn)">Received defective product (stains / damaged / torn)</option>
               <option value="Other">Other</option>
             </select>
           </div>

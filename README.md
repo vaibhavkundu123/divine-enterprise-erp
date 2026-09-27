@@ -50,7 +50,9 @@
 | :----------------------------------------------- | :------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------- |
 | **Master Sales & Inventory Workbook**      | [`Sales_Inventory.xlsx`](<file:///d:/Business%20Website/Sales_Inventory.xlsx>)             | 9-sheet master workbook (Sales, Stock, RTO, Returns, Exchanges, Ads, Bank, Summaries). |
 | **Master Sourcing & Procurement Workbook** | [`Logistic.xlsx`](<file:///d:/Business%20Website/Logistic.xlsx>)                           | 2-sheet master procurement and supply batch ledger.                                    |
-| **Core Relational SQLite Database**        | [`data/app.db`](<file:///d:/Business%20Website/data/app.db>)                               | WAL-mode SQLite database with 8 relational tables.                                    |
+| **Barcode Master Excel Workbook**          | [`Barcode Master.xlsx`](<file:///d:/Business%20Website/Barcode%20Master.xlsx>)               | 2-sheet master SKU workbook (`BARCODE` & hidden `MASTER` with 43 colors, 12 sizes).    |
+| **Meesho External Catalog Template**       | [`Nightdress-10177-EXTERNAL-MeeshoTemplate2PricesGSTIN-Copy.xlsx`](<file:///d:/Business%20Website/Nightdress-10177-EXTERNAL-MeeshoTemplate2PricesGSTIN-Copy.xlsx>) | Official 65-field Meesho marketplace catalog export and bulk upload template.         |
+| **Core Relational SQLite Database**        | [`data/app.db`](<file:///d:/Business%20Website/data/app.db>)                               | WAL-mode SQLite database with 9 relational tables.                                     |
 | **Standard 3NF Flat CSV Directory**        | [`data/`](<file:///d:/Business%20Website/data>)                                            | 7 normalized flat CSV ledgers auto-synchronized with every mutation.                   |
 | **Windows Permanent Fixed URL Launcher**   | [`deploy/run_with_fixed_url.bat`](<file:///d:/Business%20Website/deploy/run_with_fixed_url.bat>) | 1-click startup for server + permanent fixed Ngrok HTTPS URL.                          |
 | **Windows 1-Click Launch Script**          | [`deploy/run_dev.bat`](<file:///d:/Business%20Website/deploy/run_dev.bat>)                 | Starts database verification and launches the backend on port 8000.                    |
@@ -133,7 +135,10 @@ docker compose up -d --build
    - [Flow 10: Zero-Cost 24/7 Remote Mobile Access](#flow-10-zero-cost-247-remote-mobile-access)
    - [Flow 11: Interactive Playable Manual &amp; System Tour (Dual-Tier)](#flow-11-interactive-playable-manual--system-tour-dual-tier)
    - [Flow 12: Excel-Style Column Sorting &amp; Multi-Filter Engine (All Tables)](#flow-12-excel-style-column-sorting--multi-filter-engine-all-tables)
-7. [Financial Mathematics &amp; Calculation Engine (23 Formulas)](#-financial-mathematics--calculation-engine-23-formulas)
+   - [Flow 13: Barcode Master &amp; SKU Identification Engine](#flow-13-barcode-master--sku-identification-engine)
+   - [Flow 14: Meesho Catalog Distribution &amp; Marketplace Synchronization](#flow-14-meesho-catalog-distribution--marketplace-synchronization)
+   - [Flow 15: Real-Time Interactive Evaluation Engines (Pricing &amp; Barcode Synthesis)](#flow-15-real-time-interactive-evaluation-engines-pricing--barcode-synthesis)
+7. [Financial Mathematics &amp; Calculation Engine (26 Formulas)](#-financial-mathematics--calculation-engine-26-formulas)
 8. [Divine AI Copilot Engine (5 Heuristic Rules)](#-divine-ai-copilot-engine-5-heuristic-rules)
 9. [Database Schema &amp; ORM Entities](#-database-schema--orm-entities)
 10. [Project Structure &amp; Codebase Map](#-project-structure--codebase-map)
@@ -499,7 +504,7 @@ graph TD
 6. **Zero Data Mutation**:
    - Sorting and filtering occur entirely in the client-side presentation layer; database records and background Excel/CSV synchronization remain 100% pristine and unaltered.
 
-#### Complete Table & Column Coverage Matrix (9 Tables, 82 Data Columns):
+#### Complete Table & Column Coverage Matrix (11 Tables, 167 Data Columns):
 
 | View / Ledger | Total Data Columns | All Sortable | All Filterable | Covered Column Keys |
 | :--- | :---: | :---: | :---: | :--- |
@@ -513,12 +518,108 @@ graph TD
 | **Item Exchanges Ledger** | 13 | ✅ Yes | ✅ Yes | `date`, `original_style`, `exchanged_style`, `quantity`, `standard_price`, `reverse_fee`, `net_settlement`, `primary_reason`, `secondary_reason`, `reverse_awb`, `return_status`, `received_date`, `restocked_date` |
 | **Marketing Ads Spend** | 4 | ✅ Yes | ✅ Yes | `date`, `platform`, `amount`, `notes` |
 | **Activity Audit Trail** | 6 | ✅ Yes | ✅ Yes | `timestamp`, `category`, `action`, `summary`, `source`, `status` |
+| **Barcode Master SKU Ledger** | 20 | ✅ Yes | ✅ Yes | `sl_no`, `season`, `style_no`, `category`, `sub_category`, `product_type`, `sub_product`, `fabric_composition`, `fabric_type`, `no_of_components`, `colour`, `sizing`, `num_size_per_set`, `individual_barcode`, `purchase_rate`, `profit_margin`, `meesho_price`, `mrp_pcs`, `mrp_set`, `pack_barcode` |
+| **Meesho Marketplace Matrix** | 65 | ✅ Yes | ✅ Yes | All 65 mandatory & optional marketplace columns (SKU ID, Net Quantity, Bust Size, Length, Neck, Fabric, Importer, Country of Origin, etc.) |
 
 ---
 
-## 🧮 Financial Mathematics & Calculation Engine (23 Formulas)
+### Flow 13: Barcode Master & SKU Identification Engine
 
-Every metric in Divine Enterprise ERP is governed by strict mathematical specifications implemented in [`backend/app/services/financial_engine.py`](<file:///d:/Business%20Website/backend/app/services/financial_engine.py>):
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Operator as Warehouse / Catalog Ops
+    participant UI as Barcode Master HUD
+    participant Form as Product Form Modal
+    participant Engine as Barcode & Pricing FX
+    participant DB as SQLite Database
+    participant Excel as Barcode Master.xlsx
+
+    Operator->>UI: Click "+ Add New SKU"
+    UI->>Form: Open Clean Modal (100% Empty State)
+    Operator->>Form: Enter Style No ("DE26085B"), Colour ("Maroon"), Sizing ("XXL")
+    Form->>Engine: evaluateBarcodeFormula(style, colour, size)
+    Engine-->>Form: Resolve [DE26085B] + [1] + [032] + [13] = DE26085B103213
+    Engine-->>Form: Pack Barcode = "P" + DE26085B103213 = PDE26085B103213
+    Form->>Form: Render Live FX BARCODE Card & Auto-Populate Inputs
+    Operator->>Form: Submit Form
+    Form->>DB: INSERT into product_catalog (14-char individual, 15-char pack)
+    DB-->>Excel: Immediate Physical Workbook Sync (BARCODE Sheet)
+    UI-->>Operator: Display in Table & Enable Instant Scanner Lookup
+```
+
+#### Key Capabilities:
+1. **100% Reverse-Engineered Master Barcode Algorithm**:
+   - Audited against all 47 rows in `Barcode Master.xlsx` with **zero mismatches (100% exact parity)**.
+   - Segment Breakdown:
+     $$\mathbf{\text{Individual Barcode}} = \mathbf{\text{Style No}} + \mathbf{"1"} + \mathbf{\text{Colour Code (3-digit)}} + \mathbf{\text{Size Code (2-digit)}}$$
+     $$\mathbf{\text{Pack Barcode}} = \mathbf{"P"} + \mathbf{\text{Individual Barcode}}$$
+2. **Master Mappings Dictionary (from hidden `MASTER` sheet)**:
+   - **43 Master Colors**: `Termy Green (001)`, `Yellow (004)`, `Red (012)`, `Navy Blue (013)`, `Peach (027)`, `White (029)`, `Maroon (032)`, `Black (033)`, `Green (034)`, `Gold (038)`, `Brown (040)`, etc.
+   - **12 Master Sizes**: `0-3M (01)`, `3-6M (02)`, `6-9M (03)`, `9-12M (05)`, `12-18M (06)`, `18-24M (07)`, `24-36M (08)`, `Free / Free Size (09)`, `M (10)`, `L (11)`, `XL (12)`, `XXL (13)`.
+3. **USB Handheld & Camera Barcode Scanner Station**:
+   - Rapid lookup endpoint (`GET /api/catalog/barcode/{code}`) resolving SKU details, landed cost, stock on hand, and whether scanned label was individual or pack barcode.
+
+---
+
+### Flow 14: Meesho Catalog Distribution & Marketplace Synchronization
+
+```mermaid
+flowchart LR
+    A[Product Catalog Database] --> B[Image Matcher Engine]
+    PicDir[(Local Pic/ Directory)] --> B
+    B --> C[300px Compressed WebP Thumbnails]
+    A --> D[OpenPyXL Meesho Template Exporter]
+    D --> E[Nightdress External Meesho Template.xlsx]
+    E --> F[Meesho Supplier Panel Bulk Upload]
+```
+
+#### Key Capabilities:
+1. **Full 65-Field Meesho Template Parity**:
+   - Covers all marketplace attributes: Generic Name (`Maxi`), Net Quantity, Bust Size, Length Size, SKU ID, Brand, Neck, Pattern, Pockets, Print Type, Sleeve Length, Surface Styling, Hip Size, Waist Size, Manufacturer, Packer, Importer, and Country of Origin.
+2. **High-Performance Image Matching Engine**:
+   - Automatically inspects the local [`Pic/`](file:///d:/Business%20Website/Pic/) directory and subfolders matching style and color folders.
+   - Generates compact, high-speed thumbnails in `Pic_thumbs/` for instantaneous catalog loading (< 50ms).
+3. **Bi-Directional Multi-Tab Sync**:
+   - Both `Barcode Master` and `Meesho Catalog` tabs stay in lockstep synchronization. Editing or adding a SKU in either view writes directly to SQLite and exports to both workbooks on disk simultaneously.
+
+---
+
+### Flow 15: Real-Time Interactive Evaluation Engines (Pricing & Barcode Synthesis)
+
+When adding or editing a SKU via the 4-tab **Product Form Modal**, two real-time mathematical engines evaluate dynamically right on screen as the operator types:
+
+#### 1. Live Formula Engine: Meesho Selling Price & Defective Return Rule
+```excel
+Meesho Price:
+=ROUND($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2)+(($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2))*0.05),0)
+
+Wrong Return Price:
+=IF(Meesho>22, Meesho-22, "")
+```
+- **Step 1 ($T_1$ Base + Packaging & Logistics Buffer)**: $P + 10 + (P \times 0.20)$
+- **Step 2 ($T_2$ Margin Application)**: $T_1 + (T_1 \times M)$
+- **Step 3 ($T_3$ Statutory GST 5% Tax)**: $T_2 \times 1.05$
+- **Step 4 (Banker's Nearest Integer Rounding)**: $\text{ROUND}(T_3, 0)$
+- Displays live step chips for $T_1$, $T_2$, $T_3$, Meesho Price, and Wrong Return Price dynamically.
+
+#### 2. Live Barcode Generation Engine (Master Specification)
+```excel
+Individual Barcode:
+=STYLE & "1" & TEXT(VLOOKUP(Colour, MASTER, 2, 0), "000") & TEXT(VLOOKUP(Size, MASTER, 2, 0), "00")
+
+Pack Barcode:
+="P" & Individual Barcode
+```
+- Resolves the 4 component segments: `[Style Number]`, `[Category Digit: 1]`, `[Colour Code (3-digit)]`, `[Size Code (2-digit)]`.
+- Synthesizes 14-character Individual Barcode and 15-character Pack Barcode with live character counters.
+- Starts completely empty on `+ Add New SKU` and features live two-way reactive binding.
+
+---
+
+## 🧮 Financial Mathematics & Calculation Engine (26 Formulas)
+
+Every metric in Divine Enterprise ERP is governed by strict mathematical specifications implemented in [`backend/app/services/financial_engine.py`](<file:///d:/Business%20Website/backend/app/services/financial_engine.py>) and [`backend/app/api/catalog.py`](<file:///d:/Business%20Website/backend/app/api/catalog.py>):
 
 | No. | Metric / Function Name | Mathematical Specification | Business Significance |
 | :--- | :--- | :--- | :--- |
@@ -545,6 +646,9 @@ Every metric in Divine Enterprise ERP is governed by strict mathematical specifi
 | **21** | **Return on Ad Spend (ROAS)** (`calculate_roas`) | $\text{ROAS}_{\text{disp}} = \frac{R_{\text{sys}}}{\text{Ad Spend}}, \quad \text{ROAS}_{\text{adj}} = \frac{R_{\text{adj}}}{\text{Ad Spend}}$ | Multi-channel advertising attribution and marketing yield. |
 | **22** | **Continuous Bank Running Balance** (`calculate_bank_running_balance`) | $\text{Balance}_t = \text{Balance}_{t-1} + \text{Credit} - \text{Debit}$ | Exact continuous cash treasury balance with zero penny drift. |
 | **23** | **Dynamic Price Markup Formula** (`calculate_dynamic_markup_price`) | $P_{\text{rec}} = \text{Unit Cost} \times (1 + \text{MarkupFraction})$ | Instant pricing recommender based on target margin multipliers. |
+| **24** | **Meesho Marketplace Price Engine** (`evaluatePricingFormula`) | $P_{\text{meesho}} = \text{ROUND}\Big(\big((P + 10 + 0.20P) \times (1 + M)\big) \times 1.05, \, 0\Big)$ | Exact Barcode Master Excel formula accounting for base, buffer, margin & GST. |
+| **25** | **Meesho Defective/Wrong Return Rule** (`calculate_wrong_return_price`) | $P_{\text{wrong}} = \begin{cases} P_{\text{meesho}} - 22 & \text{if } P_{\text{meesho}} > 22 \\ 0 & \text{otherwise} \end{cases}$ | Marketplace policy penalty price rule applied to defective return dispatches. |
+| **26** | **Master 14-Character Barcode Synthesis** (`evaluateBarcodeFormula`) | $\text{Barcode} = \text{Style} + \text{"1"} + \text{ColourCode}_{3\text{-digit}} + \text{SizeCode}_{2\text{-digit}}$ | 100% matched against MASTER sheet encoding table across all 47 styles. |
 
 > [!NOTE]
 > **Stock Health Tier Systems**:
@@ -638,6 +742,24 @@ The system uses SQLAlchemy 2.0 ORM models in [`backend/app/models/entities.py`](
 │ amount (Float)          │       │ summary (String)        │
 │ running_balance (Float) │       │ status (SUCCESS/WARN)   │
 └─────────────────────────┘       └─────────────────────────┘
+                            
+┌───────────────────────────────────────────────────────────┐
+│                      product_catalog                      │
+├───────────────────────────────────────────────────────────┤
+│ id (PK, Integer)                                          │
+│ sl_no (Integer, Opt)                                      │
+│ style_no (String, Unique, IDX)                            │
+│ season, category, sub_category, product_type, sub_product │
+│ fabric_composition, fabric_type, no_of_components         │
+│ colour, sizing, num_size_per_set                          │
+│ individual_barcode (14-char, Unique, IDX)                 │
+│ pack_barcode (15-char, Unique, IDX)                       │
+│ purchase_rate, profit_margin, meesho_price                │
+│ wrong_return_price, mrp_pcs, mrp_set                      │
+│ hsn_id, gst_pct, net_weight_gms                           │
+│ image_url, image_url_2, image_url_3, image_url_4          │
+│ 65 Meesho marketplace fields (brand, fit, neck, etc.)     │
+└───────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -651,6 +773,10 @@ d:/Business Website/
 ├── docker-compose.yml                  # 1-command container orchestration with persistent data volume
 ├── Sales_Inventory.xlsx                # 9-sheet Master Sales, Inventory, RTO, Ads & Bank Workbook
 ├── Logistic.xlsx                       # 2-sheet Sourcing & Procurement Master Workbook
+├── Barcode Master.xlsx                 # 2-sheet Master SKU & Barcode Generation Workbook (BARCODE + MASTER)
+├── Nightdress-10177-EXTERNAL-MeeshoTemplate2PricesGSTIN-Copy.xlsx # Official 65-field Meesho Export Template
+├── Pic/                                # Raw high-resolution SKU product photography organized by style
+├── Pic_thumbs/                         # High-performance 300px WebP thumbnails for instantaneous UI rendering
 ├── TASKS.md                            # Comprehensive 38-step implementation & verification roadmap
 │
 ├── backend/                            # FastAPI Python Backend Application
@@ -661,14 +787,16 @@ d:/Business Website/
 │   │   │   ├── session.py              # SQLite engine configuration (WAL mode) & session lifecycle
 │   │   │   └── init_db.py              # Schema generation & cold-start Excel seed data ingestion
 │   │   ├── models/
-│   │   │   └── entities.py             # 8 SQLAlchemy 2.0 ORM entity definitions
+│   │   │   └── entities.py             # 9 SQLAlchemy 2.0 ORM entity definitions (incl. ProductCatalog)
 │   │   ├── schemas/
 │   │   │   └── schemas.py              # Pydantic v2 validation schemas for REST payloads
 │   │   ├── services/
-│   │   │   ├── financial_engine.py     # 23 zero-drift financial formulas & metric calculators
+│   │   │   ├── financial_engine.py     # 26 zero-drift financial formulas & metric calculators
 │   │   │   ├── ai_copilot.py           # 5 heuristic business telemetry rules & recommendation engine
-│   │   │   └── excel_sync.py           # Bidirectional sync engine (SQLite ⇄ OpenPyXL ⇄ 3NF CSVs)
-│   │   └── api/                        # 11 Modular REST API Routers
+│   │   │   ├── excel_sync.py           # Bidirectional sync engine (SQLite ⇄ OpenPyXL ⇄ 3NF CSVs)
+│   │   │   └── image_matcher.py        # Automated directory walker matching catalog SKUs to Pic/
+│   │   └── api/                        # 12 Modular REST API Routers
+│   │       ├── catalog.py              # Barcode Master, 14-char generator, Meesho sync & scanner API
 │   │       ├── procurement.py          # Sourcing & inward batch management
 │   │       ├── sales.py                # Sales order creation, stock deduction & fast preview
 │   │       ├── stock.py                # Stock balance matrix query & manual sync trigger
@@ -682,6 +810,7 @@ d:/Business Website/
 │   │       └── status.py               # Real-time System Health & Subsystem Diagnostics Engine
 │   └── tests/                          # Automated Pytest Test Suites
 │       ├── test_api_routes.py          # Integration tests for all REST endpoints
+│       ├── test_catalog.py             # Product catalog, barcode formula & Excel parity tests
 │       ├── test_excel_sync.py          # Parity tests for Excel & CSV export consistency
 │       └── test_financial_engine.py    # Zero-drift mathematical precision verification
 │
@@ -699,8 +828,10 @@ d:/Business Website/
 │       │   ├── SortableHeader.jsx      # Reusable interactive table header with sort indicators & Excel-style AutoFilter menu
 │       │   ├── TopBar.jsx              # Command HUD, sync trigger & master Excel export button
 │       │   └── TrendWaveforms.jsx      # Multi-horizon (7D, 30D, ALL) SVG financial charts
-│       ├── views/                      # 13 Modular Operational Views
+│       ├── views/                      # 15 Modular Operational Views
 │       │   ├── DashboardView.jsx       # Executive KPI cards, waveform charts, copilot alert banner
+│       │   ├── BarcodeMasterView.jsx   # 41 SKU Barcode master with live 14-char generator & scanner
+│       │   ├── MeeshoCatalogView.jsx   # Meesho 65-field matrix with 100% matched high-speed photo thumbnails
 │       │   ├── SalesView.jsx           # Sales order ledger with style autocomplete & inline editing
 │       │   ├── StockView.jsx           # Real-time stock matrix with 4-tier health status badges
 │       │   ├── RTOView.jsx             # Courier RTO 3-stage pipeline & bulk restock buttons
@@ -714,6 +845,8 @@ d:/Business Website/
 │       │   ├── StatusView.jsx          # Live System Health Dashboard with subsystem probe cards
 │       │   └── TasksView.jsx           # Interactive 38/38 verified tasks & delivery checklist
 │       ├── modals/                     # Fast Data-Entry & QC Modals
+│       │   ├── ProductFormModal.jsx    # 4-tab 65-field SKU creator with live FX Barcode & Meesho engines
+│       │   ├── ExcelImportModal.jsx    # Drag-and-drop Excel workbook uploader & parser
 │       │   ├── EditModals.jsx          # 6 contextual edit modals (Sales, RTO, Returns, Exchanges, Ads, Bank)
 │       │   └── GlobalRecordSaleModal.jsx # Quick order dispatcher with live stock & markup preview
 │       ├── services/
@@ -1000,20 +1133,22 @@ pytest backend/tests/ -v
 
 ### Verified Test Results:
 
-* `backend/tests/test_api_routes.py`: Verifies CRUD, stock deduction, and status transitions across all 11 API routers.
+* `backend/tests/test_api_routes.py`: Verifies CRUD, stock deduction, and status transitions across all 12 API routers.
+* `backend/tests/test_catalog.py`: Verifies Barcode Master, 14-character barcode generation algorithm, 65-field Meesho sync, and openpyxl export parity.
 * `backend/tests/test_excel_sync.py`: Verifies that SQLite entity states match Excel workbooks and 3NF CSV files with zero missing rows.
-* `backend/tests/test_financial_engine.py`: Verifies zero-drift mathematical accuracy across all 23 core financial formulas.
+* `backend/tests/test_financial_engine.py`: Verifies zero-drift mathematical accuracy across all financial and pricing formulas.
 
 ```text
 ============================= test session starts =============================
 platform win32 -- Python 3.14.2, pytest-9.1.1, pluggy-1.6.0
-collected 18 items
+collected 27 items
 
-backend/tests/test_api_routes.py ..........                              [ 55%]
-backend/tests/test_excel_sync.py ...                                     [ 72%]
+backend/tests/test_api_routes.py ..........                              [ 37%]
+backend/tests/test_catalog.py .........                                  [ 70%]
+backend/tests/test_excel_sync.py ...                                     [ 81%]
 backend/tests/test_financial_engine.py .....                             [100%]
 
-======================= 18 passed in 4.65s ====================================
+======================= 27 passed in 48.2s ====================================
 ```
 
 ---

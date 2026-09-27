@@ -1,0 +1,3 @@
+2026-09-21 14:01:09,254 [INFO] httpx - HTTP Request: GET https://blurred-submerge-underuse.ngrok-free.dev/api/status "HTTP/1.1 404 Not Found"
+2026-09-21 14:01:09,255 [WARNING] DivineAgent - ERP Backend is currently offline at http://127.0.0.1:8000/api. Please start the server (e.g. deploy\run_dev.bat) before submitting forms.
+2026-09-21 14:01:11,310 [ERROR] DivineAgent - Health check failed on http://127.0.0.1:8000/api/status: [WinError 10061] No connection could be made because the target machine actively refused it

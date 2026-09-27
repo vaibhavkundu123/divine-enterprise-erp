@@ -14,6 +14,7 @@ from backend.app.models.entities import (
     AdSpend,
     BankTransaction,
     ActivityAuditLog,
+    ProductCatalog,
 )
 
 def format_date(val) -> str:
@@ -65,9 +66,183 @@ def init_db(db: Session = None) -> None:
         # Check if already seeded
         existing_proc = db.query(ProcurementBatch).first()
         existing_sales = db.query(SalesOrder).first()
+        existing_catalog = db.query(ProductCatalog).first()
 
         logistic_path = BASE_DIR / "Logistic.xlsx"
         sales_path = BASE_DIR / "Sales_Inventory.xlsx"
+        barcode_master_path = BASE_DIR / "Barcode Master.xlsx"
+        meesho_path = BASE_DIR / "Nightdress-10177-EXTERNAL-MeeshoTemplate2PricesGSTIN-Copy.xlsx"
+
+        # Ingest Product Catalog from Barcode Master & Meesho Template
+        if not existing_catalog and barcode_master_path.exists():
+            meesho_meta = {}
+            sku_order_list = []
+            style_to_sku = {}
+            if meesho_path.exists():
+                try:
+                    wb_m = openpyxl.load_workbook(meesho_path, data_only=True)
+                    if "Nightdress-Fill this" in wb_m.sheetnames:
+                        ws_m = wb_m["Nightdress-Fill this"]
+                        for r in range(3, ws_m.max_row + 1):
+                            sku = ws_m.cell(r, 34).value
+                            if sku:
+                                sku_str = str(sku).strip()
+                                sku_order_list.append(sku_str)
+                                meesho_meta[sku_str] = {
+                                    "product_name": ws_m.cell(r, 2).value,
+                                    "variation": ws_m.cell(r, 3).value,
+                                    "meesho_price": ws_m.cell(r, 4).value,
+                                    "wrong_return_price": ws_m.cell(r, 5).value,
+                                    "mrp": ws_m.cell(r, 6).value,
+                                    "gst_pct": safe_float(ws_m.cell(r, 7).value, 5.0),
+                                    "hsn_id": ws_m.cell(r, 8).value,
+                                    "net_weight_gms": ws_m.cell(r, 9).value,
+                                    "inventory": safe_int(ws_m.cell(r, 10).value, 10),
+                                    "country_of_origin": ws_m.cell(r, 11).value,
+                                    "manufacturer_name": ws_m.cell(r, 12).value,
+                                    "manufacturer_address": ws_m.cell(r, 13).value,
+                                    "manufacturer_pincode": str(ws_m.cell(r, 14).value or "") if ws_m.cell(r, 14).value else None,
+                                    "packer_name": ws_m.cell(r, 15).value,
+                                    "packer_address": ws_m.cell(r, 16).value,
+                                    "packer_pincode": str(ws_m.cell(r, 17).value or "") if ws_m.cell(r, 17).value else None,
+                                    "importer_name": ws_m.cell(r, 18).value,
+                                    "importer_address": ws_m.cell(r, 19).value,
+                                    "importer_pincode": str(ws_m.cell(r, 20).value or "") if ws_m.cell(r, 20).value else None,
+                                    "add_ons": ws_m.cell(r, 21).value,
+                                    "color": ws_m.cell(r, 22).value,
+                                    "fabric": ws_m.cell(r, 23).value,
+                                    "fit_type": ws_m.cell(r, 24).value,
+                                    "generic_name": ws_m.cell(r, 25).value,
+                                    "net_quantity": str(ws_m.cell(r, 26).value or "1"),
+                                    "bust_size": str(ws_m.cell(r, 27).value or "42"),
+                                    "length_size": str(ws_m.cell(r, 28).value or "54"),
+                                    "image_url": ws_m.cell(r, 29).value,
+                                    "image_url_2": ws_m.cell(r, 30).value,
+                                    "image_url_3": ws_m.cell(r, 31).value,
+                                    "image_url_4": ws_m.cell(r, 32).value,
+                                    "sku_id": ws_m.cell(r, 34).value,
+                                    "brand_name": ws_m.cell(r, 35).value,
+                                    "group_id": ws_m.cell(r, 36).value,
+                                    "description": ws_m.cell(r, 37).value,
+                                    "ean_upc": ws_m.cell(r, 38).value,
+                                    "brand": ws_m.cell(r, 39).value,
+                                    "length": ws_m.cell(r, 40).value,
+                                    "neck": ws_m.cell(r, 41).value,
+                                    "occasion": ws_m.cell(r, 42).value,
+                                    "pattern": ws_m.cell(r, 43).value,
+                                    "pockets": ws_m.cell(r, 44).value,
+                                    "print_type": ws_m.cell(r, 45).value,
+                                    "sleeve_length": ws_m.cell(r, 46).value,
+                                    "surface_styling": ws_m.cell(r, 47).value,
+                                    "hip_size": str(ws_m.cell(r, 48).value or "44"),
+                                    "waist_size": str(ws_m.cell(r, 49).value or "36"),
+                                }
+                                for prefix_len in (8, 7, 6):
+                                    st_sub = sku_str[:prefix_len]
+                                    if st_sub not in style_to_sku:
+                                        style_to_sku[st_sub] = sku_str
+                except Exception as e:
+                    print(f"Warning loading meesho meta: {e}")
+
+            wb_bc = openpyxl.load_workbook(barcode_master_path, data_only=True)
+            if "BARCODE" in wb_bc.sheetnames:
+                ws_bc = wb_bc["BARCODE"]
+                row_idx = 0
+                for r in range(2, ws_bc.max_row + 1):
+                    style = ws_bc.cell(r, 3).value
+                    if not style:
+                        continue
+                    style_str = str(style).strip()
+                    raw_sku = ws_bc.cell(r, 14).value
+                    if raw_sku is not None and str(raw_sku).strip() and not str(raw_sku).strip().startswith("=") and str(raw_sku).strip() != "None":
+                        sku = str(raw_sku).strip()
+                    elif style_str in style_to_sku:
+                        sku = style_to_sku[style_str]
+                    elif row_idx < len(sku_order_list):
+                        sku = sku_order_list[row_idx]
+                    else:
+                        sku = f"{style_str}100000"
+
+                    row_idx += 1
+                    m_data = meesho_meta.get(sku, {})
+                    p_rate = safe_float(ws_bc.cell(r, 15).value, 0.0)
+                    p_margin = safe_float(ws_bc.cell(r, 16).value, 0.18)
+                    m_price = safe_float(ws_bc.cell(r, 17).value, 0.0)
+                    w_price = safe_float(m_data.get("wrong_return_price"), (m_price - 22 if m_price > 22 else 0.0))
+                    mrp_p = safe_float(ws_bc.cell(r, 18).value, 499.0)
+                    mrp_s = safe_float(ws_bc.cell(r, 19).value, 499.0)
+                    pack_bc = ws_bc.cell(r, 20).value
+                    pack_str = str(pack_bc).strip() if (pack_bc and str(pack_bc).strip() != "None" and not str(pack_bc).strip().startswith("=")) else f"P{sku}"
+
+                    product = ProductCatalog(
+                        sl_no=safe_int(ws_bc.cell(r, 1).value, None),
+                        season=str(ws_bc.cell(r, 2).value or "Everyday").strip(),
+                        style_no=style_str,
+                        category=str(ws_bc.cell(r, 4).value or "Nighty").strip(),
+                        sub_category=str(ws_bc.cell(r, 5).value or "Sleeveless").strip(),
+                        product_type=str(ws_bc.cell(r, 6).value or "Square Neck").strip(),
+                        sub_product=str(ws_bc.cell(r, 7).value or "SINGLE DRESS").strip(),
+                        fabric_composition=str(ws_bc.cell(r, 8).value or "Woven").strip(),
+                        fabric_type=str(ws_bc.cell(r, 9).value or "Woven").strip(),
+                        no_of_components=safe_int(ws_bc.cell(r, 10).value, 1),
+                        colour=str(ws_bc.cell(r, 11).value or "Multi").strip(),
+                        sizing=str(ws_bc.cell(r, 12).value or "XXL").strip(),
+                        num_size_per_set=safe_int(ws_bc.cell(r, 13).value, 1),
+                        individual_barcode=sku,
+                        purchase_rate=p_rate,
+                        profit_margin=p_margin,
+                        meesho_price=m_price,
+                        wrong_return_price=w_price,
+                        mrp_pcs=mrp_p,
+                        mrp_set=mrp_s,
+                        pack_barcode=pack_str,
+                        image_url=str(m_data.get("image_url")).strip() if m_data.get("image_url") else None,
+                        image_url_2=str(m_data.get("image_url_2")).strip() if m_data.get("image_url_2") else None,
+                        image_url_3=str(m_data.get("image_url_3")).strip() if m_data.get("image_url_3") else None,
+                        image_url_4=str(m_data.get("image_url_4")).strip() if m_data.get("image_url_4") else None,
+                        hsn_id=str(m_data.get("hsn_id") or "620821").strip(),
+                        gst_pct=safe_float(m_data.get("gst_pct"), 5.0),
+                        net_weight_gms=safe_int(m_data.get("net_weight_gms"), 285),
+                        description=str(m_data.get("description")).strip() if m_data.get("description") else None,
+                        is_active=True,
+                        # Complete Meesho template attributes
+                        product_name=str(m_data.get("product_name")).strip() if m_data.get("product_name") else None,
+                        inventory=safe_int(m_data.get("inventory"), 10),
+                        country_of_origin=str(m_data.get("country_of_origin") or "India").strip(),
+                        manufacturer_name=str(m_data.get("manufacturer_name") or "Pegasus Creation").strip(),
+                        manufacturer_address=str(m_data.get("manufacturer_address") or "Prasanta Apartment, Check Post").strip(),
+                        manufacturer_pincode=str(m_data.get("manufacturer_pincode") or "700125").strip(),
+                        packer_name=str(m_data.get("packer_name") or "Divine Enterprise").strip(),
+                        packer_address=str(m_data.get("packer_address") or "Prasanta Apartment, Check Post").strip(),
+                        packer_pincode=str(m_data.get("packer_pincode") or "700125").strip(),
+                        importer_name=str(m_data.get("importer_name")).strip() if m_data.get("importer_name") else None,
+                        importer_address=str(m_data.get("importer_address")).strip() if m_data.get("importer_address") else None,
+                        importer_pincode=str(m_data.get("importer_pincode")).strip() if m_data.get("importer_pincode") else None,
+                        add_ons=str(m_data.get("add_ons") or "No Add Ons").strip(),
+                        fabric=str(m_data.get("fabric") or "Cotton").strip(),
+                        fit_type=str(m_data.get("fit_type") or "Dress").strip(),
+                        generic_name=str(m_data.get("generic_name") or "Maxi").strip(),
+                        net_quantity=str(m_data.get("net_quantity") or "1").strip(),
+                        bust_size=str(m_data.get("bust_size") or "42").strip(),
+                        length_size=str(m_data.get("length_size") or "54").strip(),
+                        sku_id=str(m_data.get("sku_id") or sku).strip(),
+                        brand_name=str(m_data.get("brand_name")).strip() if m_data.get("brand_name") else None,
+                        group_id=str(m_data.get("group_id")).strip() if m_data.get("group_id") else None,
+                        ean_upc=str(m_data.get("ean_upc")).strip() if m_data.get("ean_upc") else None,
+                        brand=str(m_data.get("brand")).strip() if m_data.get("brand") else None,
+                        length=str(m_data.get("length") or "Maxi").strip(),
+                        neck=str(m_data.get("neck") or ws_bc.cell(r, 6).value or "Square Neck").strip(),
+                        occasion=str(m_data.get("occasion") or "Everyday").strip(),
+                        pattern=str(m_data.get("pattern") or "Printed").strip(),
+                        pockets=str(m_data.get("pockets") or "No Pocket").strip(),
+                        print_type=str(m_data.get("print_type") or "Botanical").strip(),
+                        sleeve_length=str(m_data.get("sleeve_length") or ws_bc.cell(r, 5).value or "Sleeveless").strip(),
+                        surface_styling=str(m_data.get("surface_styling") or "Pleated Or Gathered").strip(),
+                        hip_size=str(m_data.get("hip_size") or "44").strip(),
+                        waist_size=str(m_data.get("waist_size") or "36").strip(),
+                    )
+                    db.add(product)
+                db.commit()
 
         # Ingest Logistic.xlsx
         if not existing_proc and logistic_path.exists():

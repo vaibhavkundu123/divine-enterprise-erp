@@ -16,6 +16,8 @@ import {
   Layers,
   Database,
   ShieldCheck,
+  Barcode,
+  ShoppingBag,
   X,
 } from 'lucide-react';
 
@@ -43,13 +45,23 @@ export default function Sidebar({
     {
       title: 'OPERATIONS & INVENTORY',
       items: [
+        { id: 'barcode_master', label: 'Barcode Master', icon: Barcode, badge: '41 SKUs', badgeColor: 'indigo' },
+        { id: 'meesho_catalog', label: 'Meesho Catalog', icon: ShoppingBag, badge: 'Photos Ready', badgeColor: 'emerald' },
         { id: 'sales', label: 'Sales Ledger', icon: ShoppingCart },
+
         {
           id: 'stock',
           label: 'Stock Matrix',
           icon: Package,
-          badge: kpis?.low_stock_count > 0 ? `${kpis.low_stock_count} Low` : null,
-          badgeColor: 'amber',
+          badge:
+            kpis?.out_of_stock_count > 0 && kpis?.low_stock_count > 0
+              ? `${kpis.out_of_stock_count} Out • ${kpis.low_stock_count} Low`
+              : kpis?.out_of_stock_count > 0
+              ? `${kpis.out_of_stock_count} Out`
+              : kpis?.low_stock_count > 0
+              ? `${kpis.low_stock_count} Low`
+              : null,
+          badgeColor: kpis?.out_of_stock_count > 0 ? 'rose' : 'amber',
         },
         { id: 'procurement', label: 'Procurement & POs', icon: Truck },
       ],
@@ -185,6 +197,8 @@ export default function Sidebar({
                               ? 'bg-white/20 text-white'
                               : item.badgeColor === 'emerald'
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : item.badgeColor === 'rose'
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                               : item.badgeColor === 'amber'
                               ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
                               : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'

@@ -54,3 +54,8 @@ Thumbs.db
 deploy/bin/
 *.exe
 
+# Analysis & Local Tools
+graphify-out/
+run_glm_*.py
+glm_*_output.md
+inspect_summary.json

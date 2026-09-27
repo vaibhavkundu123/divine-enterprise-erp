@@ -16,6 +16,7 @@ from backend.app.models.entities import (
     ItemExchange,
     AdSpend,
     BankTransaction,
+    ProductCatalog,
 )
 
 HEADER_FILL = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
@@ -616,6 +617,226 @@ def export_sales_inventory_workbook(db: Session, target_path: Optional[Path] = N
 
     return safe_save_workbook(wb, target_path)
 
+def export_barcode_master_workbook(db: Session, target_path: Optional[Path] = None) -> Optional[Path]:
+    if target_path is None:
+        target_path = BASE_DIR / "Barcode Master.xlsx"
+    if not target_path.exists():
+        return None
+
+    try:
+        wb = openpyxl.load_workbook(target_path, data_only=False)
+        if "BARCODE" not in wb.sheetnames:
+            return None
+        ws = wb["BARCODE"]
+
+        products = db.query(ProductCatalog).all()
+        prod_map = {p.style_no.strip(): p for p in products}
+        seen_styles = set()
+
+        for r in range(2, ws.max_row + 1):
+            st = ws.cell(r, 3).value
+            if st and str(st).strip() in prod_map:
+                st_key = str(st).strip()
+                seen_styles.add(st_key)
+                p = prod_map[st_key]
+                ws.cell(r, 1, value=p.sl_no or (r - 1))
+                ws.cell(r, 2, value=p.season or "Everyday")
+                ws.cell(r, 4, value=p.category or "Nighty")
+                ws.cell(r, 5, value=p.sub_category or "Sleeveless")
+                ws.cell(r, 6, value=p.product_type or "Square Neck")
+                ws.cell(r, 7, value=p.sub_product or "SINGLE DRESS")
+                ws.cell(r, 8, value=p.fabric_composition or "Woven")
+                ws.cell(r, 9, value=p.fabric_type or "Woven")
+                ws.cell(r, 10, value=p.no_of_components or 1)
+                ws.cell(r, 11, value=p.colour)
+                ws.cell(r, 12, value=p.sizing or "XXL")
+                ws.cell(r, 13, value=p.num_size_per_set or 1)
+                ws.cell(r, 14, value=p.individual_barcode)
+                ws.cell(r, 15, value=p.purchase_rate)
+                ws.cell(r, 16, value=p.profit_margin)
+                ws.cell(r, 17, value=f"=ROUND($O{r}+10+($O{r}*0.2)+(($O{r}+10+($O{r}*0.2))*$P{r})+(($O{r}+10+($O{r}*0.2)+(($O{r}+10+($O{r}*0.2))*$P{r}))*0.05),0)")
+                ws.cell(r, 18, value=p.mrp_pcs)
+                ws.cell(r, 19, value=p.mrp_set)
+                ws.cell(r, 20, value=p.pack_barcode)
+
+        # Append any new products not already in sheet
+        for p in products:
+            if p.style_no.strip() not in seen_styles:
+                next_row = ws.max_row + 1
+                bc_formula = f"=ROUND($O{next_row}+10+($O{next_row}*0.2)+(($O{next_row}+10+($O{next_row}*0.2))*$P{next_row})+(($O{next_row}+10+($O{next_row}*0.2)+(($O{next_row}+10+($O{next_row}*0.2))*$P{next_row}))*0.05),0)"
+                ws.append([
+                    p.sl_no or next_row - 1,
+                    p.season or "Everyday",
+                    p.style_no,
+                    p.category or "Nighty",
+                    p.sub_category or "Sleeveless",
+                    p.product_type or "Square Neck",
+                    p.sub_product or "SINGLE DRESS",
+                    p.fabric_composition or "Woven",
+                    p.fabric_type or "Woven",
+                    p.no_of_components or 1,
+                    p.colour,
+                    p.sizing or "XXL",
+                    p.num_size_per_set or 1,
+                    p.individual_barcode,
+                    p.purchase_rate,
+                    p.profit_margin,
+                    bc_formula,
+                    p.mrp_pcs,
+                    p.mrp_set,
+                    p.pack_barcode or f"P{p.individual_barcode}",
+                ])
+                seen_styles.add(p.style_no.strip())
+
+        return safe_save_workbook(wb, target_path)
+    except Exception as e:
+        print(f"Error syncing Barcode Master: {e}")
+        return None
+
+def export_meesho_template_workbook(db: Session, target_path: Optional[Path] = None) -> Optional[Path]:
+    if target_path is None:
+        target_path = BASE_DIR / "Nightdress-10177-EXTERNAL-MeeshoTemplate2PricesGSTIN-Copy.xlsx"
+    if not target_path.exists():
+        return None
+
+    try:
+        wb = openpyxl.load_workbook(target_path, data_only=False)
+        if "Nightdress-Fill this" not in wb.sheetnames:
+            return None
+        ws = wb["Nightdress-Fill this"]
+
+        products = db.query(ProductCatalog).all()
+        prod_map = {p.individual_barcode.strip(): p for p in products}
+        seen_skus = set()
+
+        for r in range(3, ws.max_row + 1):
+            sku = ws.cell(r, 34).value
+            if sku and str(sku).strip() in prod_map:
+                sku_key = str(sku).strip()
+                seen_skus.add(sku_key)
+                p = prod_map[sku_key]
+
+                if p.product_name:
+                    ws.cell(r, 2, value=p.product_name)
+                ws.cell(r, 3, value=p.sizing or "XXL")
+                ws.cell(r, 4, value=p.meesho_price)
+                ws.cell(r, 5, value=f'=IF(D{r}>22,D{r}-22,"")')
+                ws.cell(r, 6, value=p.mrp_pcs)
+                ws.cell(r, 7, value=str(int(p.gst_pct)) if p.gst_pct else "5")
+                ws.cell(r, 8, value=p.hsn_id or "620821")
+                ws.cell(r, 9, value=p.net_weight_gms or 285)
+                ws.cell(r, 10, value=p.inventory or 10)
+                ws.cell(r, 11, value=p.country_of_origin or "India")
+                ws.cell(r, 12, value=p.manufacturer_name or "Pegasus Creation")
+                ws.cell(r, 13, value=p.manufacturer_address or "Prasanta Apartment, Check Post")
+                ws.cell(r, 14, value=p.manufacturer_pincode or "700125")
+                ws.cell(r, 15, value=p.packer_name or "Divine Enterprise")
+                ws.cell(r, 16, value=p.packer_address or "Prasanta Apartment, Check Post")
+                ws.cell(r, 17, value=p.packer_pincode or "700125")
+                ws.cell(r, 18, value=p.importer_name if p.importer_name and p.importer_name != "Not Required" else f'=IF(K{r}="India","Not Required","")')
+                ws.cell(r, 19, value=p.importer_address if p.importer_address and p.importer_address != "Not Required" else f'=IF(K{r}="India","Not Required","")')
+                ws.cell(r, 20, value=p.importer_pincode if p.importer_pincode and p.importer_pincode != "Not Required" else f'=IF(K{r}="India","Not Required","")')
+                ws.cell(r, 21, value=p.add_ons or "No Add Ons")
+                ws.cell(r, 22, value=p.colour)
+                ws.cell(r, 23, value=p.fabric or "Cotton")
+                ws.cell(r, 24, value=p.fit_type or "Dress")
+                ws.cell(r, 25, value=p.generic_name or "Maxi")
+                ws.cell(r, 26, value=p.net_quantity or "1")
+                ws.cell(r, 27, value=p.bust_size or "42")
+                ws.cell(r, 28, value=p.length_size or "54")
+                if p.image_url:
+                    ws.cell(r, 29, value=p.image_url)
+                if p.image_url_2:
+                    ws.cell(r, 30, value=p.image_url_2)
+                if p.image_url_3:
+                    ws.cell(r, 31, value=p.image_url_3)
+                if p.image_url_4:
+                    ws.cell(r, 32, value=p.image_url_4)
+                ws.cell(r, 33, value=p.style_no)
+                ws.cell(r, 34, value=p.sku_id or p.individual_barcode)
+                if p.brand_name:
+                    ws.cell(r, 35, value=p.brand_name)
+                if p.group_id:
+                    ws.cell(r, 36, value=p.group_id)
+                if p.description:
+                    ws.cell(r, 37, value=p.description)
+                if p.ean_upc:
+                    ws.cell(r, 38, value=p.ean_upc)
+                if p.brand:
+                    ws.cell(r, 39, value=p.brand)
+                ws.cell(r, 40, value=p.length or "Maxi")
+                ws.cell(r, 41, value=p.neck or p.product_type or "Square Neck")
+                ws.cell(r, 42, value=p.occasion or "Everyday")
+                ws.cell(r, 43, value=p.pattern or "Printed")
+                ws.cell(r, 44, value=p.pockets or "No Pocket")
+                ws.cell(r, 45, value=p.print_type or "Botanical")
+                ws.cell(r, 46, value=p.sleeve_length or p.sub_category or "Sleeveless")
+                ws.cell(r, 47, value=p.surface_styling or "Pleated Or Gathered")
+                ws.cell(r, 48, value=p.hip_size or "44")
+                ws.cell(r, 49, value=p.waist_size or "36")
+
+        # Append any new products not already in sheet
+        for p in products:
+            if p.individual_barcode.strip() not in seen_skus:
+                next_m_row = ws.max_row + 1
+                ws.append([
+                    None,
+                    p.product_name,
+                    p.sizing or "XXL",
+                    p.meesho_price,
+                    f'=IF(D{next_m_row}>22,D{next_m_row}-22,"")',
+                    p.mrp_pcs,
+                    str(int(p.gst_pct)) if p.gst_pct else "5",
+                    p.hsn_id or "620821",
+                    p.net_weight_gms or 285,
+                    p.inventory or 10,
+                    p.country_of_origin or "India",
+                    p.manufacturer_name or "Pegasus Creation",
+                    p.manufacturer_address or "Prasanta Apartment, Check Post",
+                    p.manufacturer_pincode or "700125",
+                    p.packer_name or "Divine Enterprise",
+                    p.packer_address or "Prasanta Apartment, Check Post",
+                    p.packer_pincode or "700125",
+                    p.importer_name if p.importer_name and p.importer_name != "Not Required" else f'=IF(K{next_m_row}="India","Not Required","")',
+                    p.importer_address if p.importer_address and p.importer_address != "Not Required" else f'=IF(K{next_m_row}="India","Not Required","")',
+                    p.importer_pincode if p.importer_pincode and p.importer_pincode != "Not Required" else f'=IF(K{next_m_row}="India","Not Required","")',
+                    p.add_ons or "No Add Ons",
+                    p.colour,
+                    p.fabric or "Cotton",
+                    p.fit_type or "Dress",
+                    p.generic_name or "Maxi",
+                    p.net_quantity or "1",
+                    p.bust_size or "42",
+                    p.length_size or "54",
+                    p.image_url,
+                    p.image_url_2,
+                    p.image_url_3,
+                    p.image_url_4,
+                    p.style_no,
+                    p.sku_id or p.individual_barcode,
+                    p.brand_name,
+                    p.group_id,
+                    p.description,
+                    p.ean_upc,
+                    p.brand,
+                    p.length or "Maxi",
+                    p.neck or p.product_type or "Square Neck",
+                    p.occasion or "Everyday",
+                    p.pattern or "Printed",
+                    p.pockets or "No Pocket",
+                    p.print_type or "Botanical",
+                    p.sleeve_length or p.sub_category or "Sleeveless",
+                    p.surface_styling or "Pleated Or Gathered",
+                    p.hip_size or "44",
+                    p.waist_size or "36",
+                ])
+                seen_skus.add(p.individual_barcode.strip())
+
+        return safe_save_workbook(wb, target_path)
+    except Exception as e:
+        print(f"Error syncing Meesho Template: {e}")
+        return None
+
 def sync_all(db: Optional[Session] = None) -> Dict[str, Any]:
     close_db = False
     if db is None:
@@ -624,13 +845,18 @@ def sync_all(db: Optional[Session] = None) -> Dict[str, Any]:
     try:
         log_path = export_logistic_workbook(db)
         sales_path = export_sales_inventory_workbook(db)
+        bc_path = export_barcode_master_workbook(db)
+        meesho_path = export_meesho_template_workbook(db)
         export_flat_csvs(db)
         return {
             "status": "success",
             "logistic_path": str(log_path),
             "sales_inventory_path": str(sales_path),
+            "barcode_master_path": str(bc_path) if bc_path else None,
+            "meesho_template_path": str(meesho_path) if meesho_path else None,
             "timestamp": datetime.now().isoformat(),
         }
     finally:
         if close_db:
             db.close()
+

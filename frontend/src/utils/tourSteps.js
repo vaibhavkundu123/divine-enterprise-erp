@@ -138,17 +138,17 @@ export const TAB_TOURS = {
         preferredPlacement: 'top'
       },
       {
-        selector: '[data-tour="dash-recent-sales"]',
-        badge: 'LIVE TELEMETRY',
-        title: 'Real-Time Sales Activity Feed',
-        description: 'Chronological real-time ledger stream showing recent customer order dispatches with instantaneous financial metrics.',
+        selector: '[data-tour="dash-out-of-stock"]',
+        badge: 'DEPLETION CRITICAL',
+        title: 'Out of Stock Depletion Alert Box',
+        description: 'Immediate operational watchdog highlighting product styles that have reached zero stock on hand.',
         details: [
-          'Displays Order Date, Style SKU, Units Sold, and Gross Profit in real time.',
-          'Color-coded profit margin badges (Green for positive, Red for negative) provide instant health visibility.',
-          'Clicking any record navigates directly to the full Sales Order Ledger.',
-          'Guarantees zero lag between order dispatch and dashboard reflection.'
+          'Flags completely exhausted SKUs that cannot fulfill incoming customer demand.',
+          'Displays style SKU, units sold, zero-stock condition, and immediate inward procurement trigger.',
+          'Direct "+ Purchase Inward" shortcut navigates directly to the Procurement Batch system.',
+          'Coordinates with the adjacent Low Stock Radar to maintain complete inventory continuity.'
         ],
-        tip: 'Click any order to jump into the Sales Ledger for full price editing or invoice printing.',
+        tip: 'Check this box daily to issue urgent factory purchase orders before key styles sell out completely.',
         preferredPlacement: 'top'
       },
       {

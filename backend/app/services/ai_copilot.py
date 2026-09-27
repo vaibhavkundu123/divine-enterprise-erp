@@ -62,27 +62,52 @@ def generate_ai_copilot_insights(db: Session) -> List[Dict[str, Any]]:
         })
 
     # ---------------------------------------------------------
-    # Rule 2: Inventory Radar (Low Stock Detection <= 5 units)
+    # Rule 2: Inventory Radar (Out of Stock & Low Stock Detection)
     # ---------------------------------------------------------
     low_stock_items = metrics.get("low_stock_items", [])
-    if low_stock_items:
-        critical_skus = [item["style_no"] for item in low_stock_items[:3]]
-        sku_str = ", ".join(critical_skus)
+    out_of_stock_items = metrics.get("out_of_stock_items", [])
+    out_count = len(out_of_stock_items)
+    low_count = len(low_stock_items)
+    total_count = out_count + low_count
+
+    if out_count > 0 or low_count > 0:
+        low_sku_examples = [item["style_no"] for item in low_stock_items[:3]]
+        sku_str = ", ".join(low_sku_examples)
         if len(low_stock_items) > 3:
             sku_str += f" and {len(low_stock_items) - 3} more"
+
+        if out_count > 0 and low_count > 0:
+            out_sku_str = ", ".join(item["style_no"] for item in out_of_stock_items)
+            summary_text = (
+                f"{out_count} style is completely Out of Stock ({out_sku_str}) and {low_count} styles "
+                f"have low stock (5 or fewer units remaining, e.g. {sku_str}). Proactive procurement is recommended to maintain sales velocity."
+            )
+            title_text = f"Inventory Alert: {out_count} Out of Stock • {low_count} Low Stock"
+        elif out_count > 0:
+            summary_text = (
+                f"{out_count} style(s) are completely Out of Stock ({sku_str}). Immediate purchase inward is required."
+            )
+            title_text = f"Stockout Alert: {out_count} Out of Stock SKU(s)"
+        else:
+            summary_text = (
+                f"{low_count} product style(s) have 5 or fewer units remaining ({sku_str}). "
+                f"Proactive procurement is recommended to maintain sales velocity."
+            )
+            title_text = f"Reorder Alert: {low_count} Low Stock SKU(s)"
+
         insights.append({
             "rule_id": 2,
             "category": "INVENTORY_RADAR",
-            "title": f"Stockout Warning: {len(low_stock_items)} Critical SKU(s)",
-            "severity": "WARNING",
-            "badge": "Reorder Alert",
-            "summary": (
-                f"{len(low_stock_items)} product style(s) have 5 or fewer units remaining ({sku_str}). "
-                f"Proactive procurement is recommended to maintain sales velocity."
-            ),
+            "title": title_text,
+            "severity": "DANGER" if out_count > 0 else "WARNING",
+            "badge": "Depletion Alert" if out_count > 0 else "Reorder Alert",
+            "summary": summary_text,
             "metrics": {
-                "critical_count": len(low_stock_items),
-                "critical_skus": [item["style_no"] for item in low_stock_items],
+                "out_of_stock_count": out_count,
+                "low_stock_count": low_count,
+                "critical_count": total_count,
+                "out_of_stock_skus": [item["style_no"] for item in out_of_stock_items],
+                "low_stock_skus": [item["style_no"] for item in low_stock_items],
             },
             "action_label": "View Inventory Matrix",
             "action_target": "stock",

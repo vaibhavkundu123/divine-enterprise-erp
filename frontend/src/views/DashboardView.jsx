@@ -28,18 +28,29 @@ export default function DashboardView({
   onStartMasterTour,
   onStartTabTour,
 }) {
-  const [recentSales, setRecentSales] = useState([]);
-  const [loadingSales, setLoadingSales] = useState(false);
+  const [stockList, setStockList] = useState([]);
+  const [loadingStock, setLoadingStock] = useState(false);
 
   useEffect(() => {
-    setLoadingSales(true);
-    api.getSales()
+    setLoadingStock(true);
+    api.getStock()
       .then((data) => {
         if (Array.isArray(data)) {
-          setRecentSales(data.slice(-5).reverse());
+          setStockList(data);
         }
       })
-      .catch((err) => console.error('Failed to load recent sales:', err));
+      .catch((err) => console.error('Failed to load stock for dashboard:', err))
+      .finally(() => setLoadingStock(false));
+  }, []);
+
+  useEffect(() => {
+    const handleSync = () => {
+      api.getStock().then((data) => {
+        if (Array.isArray(data)) setStockList(data);
+      }).catch(() => {});
+    };
+    window.addEventListener('divine-sale-created', handleSync);
+    return () => window.removeEventListener('divine-sale-created', handleSync);
   }, []);
 
   if (!kpis) {
@@ -54,7 +65,16 @@ export default function DashboardView({
   }
 
   const isProfitPositive = (kpis.net_realized_profit || 0) >= 0;
-  const lowStockItems = (kpis.low_stock_items || []).slice(0, 5);
+
+  // Filter Out of Stock items (stock_on_hand <= 0 or status Out of Stock / Over Sold)
+  const outOfStockItems = stockList.length > 0
+    ? stockList.filter((item) => (item.stock_on_hand || 0) <= 0 || item.status === 'Out of Stock' || item.status === 'Over Sold')
+    : (kpis.low_stock_items || []).filter((item) => (item.stock_on_hand || 0) <= 0 || item.status === 'Out of Stock' || item.status === 'Over Sold');
+
+  // Filter Low Stock items (stock_on_hand > 0 and <= 5)
+  const lowStockItems = stockList.length > 0
+    ? stockList.filter((item) => (item.stock_on_hand || 0) > 0 && (item.stock_on_hand || 0) <= 5).slice(0, 5)
+    : (kpis.low_stock_items || []).filter((item) => (item.stock_on_hand || 0) > 0).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -150,11 +170,18 @@ export default function DashboardView({
 
           <div className="flex items-center justify-between text-xs text-slate-400 mt-4 pt-3 border-t border-slate-800">
             <span>Valuation: {formatCurrency(kpis.warehouse_stock_valuation)}</span>
-            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-              kpis.low_stock_count > 0 ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-slate-400'
-            }`}>
-              {kpis.low_stock_count} low stock
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {((kpis.out_of_stock_count ?? outOfStockItems.length) > 0) && (
+                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/25">
+                  {kpis.out_of_stock_count ?? outOfStockItems.length} out of stock
+                </span>
+              )}
+              <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                ((kpis.low_stock_count ?? lowStockItems.length) > 0) ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-slate-400'
+              }`}>
+                {kpis.low_stock_count ?? lowStockItems.length} low stock
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -315,20 +342,27 @@ export default function DashboardView({
 
       {/* 5. Quick Summary Widgets Grid (Recent Sales Snapshot & Low Stock Radar) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Widget 1: Recent Sales Snapshot */}
-        <div data-tour="dash-recent-sales" className="glass-panel p-5">
+        {/* Widget 1: Out of Stock Depletion Alert */}
+        <div data-tour="dash-out-of-stock" className="glass-panel p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="text-sm">🛒</span>
-              <h3 className="font-bold text-sm text-white font-heading">
-                Recent Sales Snapshot
+              <span className="text-sm">🚫</span>
+              <h3 className="font-bold text-sm text-white font-heading flex items-center gap-2">
+                Out of Stock Depletion
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                  outOfStockItems.length > 0
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                }`}>
+                  {outOfStockItems.length} {outOfStockItems.length === 1 ? 'SKU' : 'SKUs'}
+                </span>
               </h3>
             </div>
             <button
-              onClick={() => onNavigateTab && onNavigateTab('sales')}
+              onClick={() => onNavigateTab && onNavigateTab('stock')}
               className="btn btn-outline text-xs py-1 px-2.5 h-7 font-medium text-slate-300 hover:text-white"
             >
-              Full Ledger ➔
+              Stock Matrix ➔
             </button>
           </div>
 
@@ -336,39 +370,53 @@ export default function DashboardView({
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/80 text-slate-400 border-b border-slate-800 sticky top-0">
                 <tr>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Style No.</th>
-                  <th className="py-2.5 px-3 text-right">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Revenue</th>
-                  <th className="py-2.5 px-3 text-right">Profit</th>
+                  <th className="py-2.5 px-3">Style SKU</th>
+                  <th className="py-2.5 px-3 text-right">Total Sold</th>
+                  <th className="py-2.5 px-3 text-right">Stock on Hand</th>
+                  <th className="py-2.5 px-3 text-center">Status</th>
+                  <th className="py-2.5 px-3 text-right">Replenishment</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {recentSales.length === 0 ? (
+                {outOfStockItems.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="py-8 text-center text-slate-400">
-                      {loadingSales ? 'Loading recent sales...' : 'No sales recorded yet.'}
+                    <td colSpan="5" className="py-8 text-center text-emerald-400 font-medium">
+                      <div className="flex flex-col items-center justify-center gap-1.5">
+                        <span className="text-base">✅</span>
+                        <span>{loadingStock ? 'Auditing stock matrix...' : 'Zero Out-of-Stock SKUs'}</span>
+                        <span className="text-[11px] text-slate-400 font-normal">
+                          {loadingStock ? 'Checking warehouse balances...' : 'All catalog styles currently have active sellable inventory.'}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 ) : (
-                  recentSales.map((s, idx) => (
-                    <tr key={s.id || idx} className="hover:bg-white/5 transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-300">{s.date}</td>
-                      <td className="py-2.5 px-3">
-                        <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono text-[11px]">
-                          {s.style_no}
+                  outOfStockItems.map((item, idx) => (
+                    <tr key={item.style_no || idx} className="hover:bg-white/5 transition-colors">
+                      <td className="py-2.5 px-3 font-medium">
+                        <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono text-[11px]">
+                          {item.style_no}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-cyan-400">
-                        {formatNumber(s.quantity_sold)}
+                      <td className="py-2.5 px-3 text-right font-mono text-slate-300">
+                        {item.total_sold !== undefined ? `${formatNumber(item.total_sold)} units` : '—'}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-200">
-                        {formatCurrency(s.total_revenue || s.revenue)}
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-rose-400">
+                        {item.stock_on_hand !== undefined ? `${item.stock_on_hand} units` : '0 units'}
                       </td>
-                      <td className={`py-2.5 px-3 text-right font-mono font-bold ${
-                        (s.gross_profit || s.profit || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                      }`}>
-                        {formatCurrency(s.gross_profit || s.profit)}
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                          {item.status || 'Out of Stock'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button
+                          onClick={() => onNavigateTab && onNavigateTab('procurement')}
+                          className="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-600/20 text-rose-300 hover:bg-rose-600/30 border border-rose-500/30 transition-colors cursor-pointer"
+                          title="Open Procurement Batch to purchase more inward units"
+                        >
+                          + Purchase Inward
+                        </button>
                       </td>
                     </tr>
                   ))

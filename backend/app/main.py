@@ -21,6 +21,7 @@ from backend.app.api import (
     analytics,
     audit,
     status,
+    catalog,
 )
 
 @asynccontextmanager
@@ -36,13 +37,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Middleware: Request Timing Header
+# Middleware: Request Timing & Static Asset Cache Headers
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
     response.headers["X-Process-Time"] = f"{process_time:.4f}s"
+    # Enable strong client-side caching for media and static assets to eliminate reload delay
+    if request.url.path.startswith(("/Pic", "/Pic_thumbs", "/assets")):
+        response.headers["Cache-Control"] = "public, max-age=604800, immutable"
     return response
 
 # Middleware: CORS
@@ -66,6 +70,7 @@ app.include_router(bank.router)
 app.include_router(analytics.router)
 app.include_router(audit.router)
 app.include_router(status.router)
+app.include_router(catalog.router)
 
 
 # Health Check Probe
@@ -77,6 +82,15 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "version": "2.4.0",
     }
+
+# Mount Pic and Pic_thumbs directory for product images and fast thumbnails
+pic_dir = BASE_DIR / "Pic"
+if pic_dir.exists():
+    app.mount("/Pic", StaticFiles(directory=str(pic_dir)), name="pic")
+
+thumbs_dir = BASE_DIR / "Pic_thumbs"
+thumbs_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/Pic_thumbs", StaticFiles(directory=str(thumbs_dir)), name="pic_thumbs")
 
 # Mount static frontend build if available
 frontend_dist = BASE_DIR / "frontend" / "dist"
