@@ -301,6 +301,21 @@ export const STANDARD_LENGTH_SIZES = ['36', '38', '40', '42', '44', '46', '48', 
 export const STANDARD_HIP_SIZES = ['30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58', '60'];
 export const STANDARD_WAIST_SIZES = ['24', '26', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54'];
 
+export const STANDARD_PRODUCT_NAMES = [
+  'Cotton Nighty for Women, Nighty, Cotton Nighty, Summer Nighty, Nighty for Ladies, Nighty for girls, Floral Nighty, Pure cotton nighty, Maxi, Gown, Soft breathable sleepwear.',
+  'Stylish Comfortable, Cotton Nighty for Women, Nighty, 100% Cotton Nighty, Summer Nighty, Nighty for Ladies, Nighty for girls, Floral Nighty, Pure cotton nighty, Maxi, Gown, Soft breathable sleepwear, Skin Friendly Nightdress.',
+  'Women Pure Cotton Printed Maxi Nighty / Nightdress / Sleepwear Daily Wear Gown',
+  'Premium 100% Woven Cotton Breathable Summer Nighty with Contrast Neck Piping',
+  'Divine Enterprise Women Printed Pure Cotton Maxi Nighty Dress',
+];
+
+export const STANDARD_PRODUCT_DESCRIPTIONS = [
+  'Upgrade your daily comfort with this printed nighty for women. Designed as a full-length maxi night gown, this sleeveless sleepwear offers a relaxed, flowing fit ideal for warm weather and daily home wear. The square neckline features contrast piping and a delicate center bow detail, complementing the all-over abstract print.',
+  'Experience peaceful nights and relaxing days with our premium 100% pure cotton nighty. Crafted with breathable, skin-friendly fabric that keeps you cool throughout the summer. Features durable stitching, high color-fastness, and an elegant neckline with delicate detailing.',
+  'Soft, lightweight, and durable pure cotton night gown designed for everyday relaxation and restful sleep. Tailored in a comfortable regular fit with vibrant prints and easy maintenance fabric.',
+  'Made from premium soft cotton fabric ensuring all-day breathability and luxurious comfort. Suitable for loungewear, sleepwear, and everyday casual home wear. Easy machine washable with long-lasting color brilliance.',
+];
+
 /**
  * Normalizes any Windows file path (e.g. D:\Business Website\Pic\DE26011\Blue\Blue_1.jpg),
  * relative path, or server path to a valid web URL path (/Pic/...)
@@ -376,34 +391,169 @@ export function EditableDropdown({
   className = '',
   type = 'text',
   listId,
+  storageKey,
+  isTextarea = false,
+  rows = 3,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropUp, setDropUp] = useState(false);
+  const [customStoredOptions, setCustomStoredOptions] = useState([]);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+  const listRef = useRef(null);
   const strVal = value != null ? String(value) : '';
 
+  const effectiveStorageKey = storageKey || (label ? label.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase() : '');
+
+  // Load custom stored options from localStorage
+  useEffect(() => {
+    if (!effectiveStorageKey) return;
+    try {
+      const stored = localStorage.getItem(`divine_dropdown_${effectiveStorageKey}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setCustomStoredOptions(parsed);
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [effectiveStorageKey]);
+
+  // Save new custom entered value to localStorage
+  const saveCustomValue = (valToSave) => {
+    if (!valToSave || typeof valToSave !== 'string') return;
+    const trimmed = valToSave.trim();
+    if (!trimmed || trimmed === 'Not Required') return;
+    if (!effectiveStorageKey) return;
+
+    try {
+      const storageId = `divine_dropdown_${effectiveStorageKey}`;
+      const existing = JSON.parse(localStorage.getItem(storageId) || '[]');
+      const inStandard = options.some((o) => String(o).trim().toLowerCase() === trimmed.toLowerCase());
+      const inCustom = existing.some((o) => String(o).trim().toLowerCase() === trimmed.toLowerCase());
+      if (!inStandard && !inCustom) {
+        const updated = [trimmed, ...existing];
+        localStorage.setItem(storageId, JSON.stringify(updated));
+        setCustomStoredOptions(updated);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  // Merge standard options with custom stored options (deduped, case-insensitive)
+  const allMergedOptions = useMemo(() => {
+    const combined = [...options];
+    for (const c of customStoredOptions) {
+      if (!combined.some((o) => String(o).trim().toLowerCase() === String(c).trim().toLowerCase())) {
+        combined.push(c);
+      }
+    }
+    return combined;
+  }, [options, customStoredOptions]);
+
+  // Close on outside click and save custom value
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
+        if (isOpen && strVal) {
+          saveCustomValue(strVal);
+        }
         setIsOpen(false);
         setIsTyping(false);
+        setHighlightedIndex(-1);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen, strVal]);
 
+  // Smart dropup calculation: open upwards if near screen or container bottom
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setDropUp(spaceBelow < 250 && spaceAbove > 180);
+    }
+  }, [isOpen]);
+
+  // Filtered options based on user typing
   const filteredOptions = useMemo(() => {
-    if (!isTyping || !strVal) return options;
+    if (!isTyping || !strVal) return allMergedOptions;
     const lower = strVal.toLowerCase().trim();
-    return options.filter((opt) => String(opt).toLowerCase().includes(lower));
-  }, [options, strVal, isTyping]);
+    return allMergedOptions.filter((opt) => String(opt).toLowerCase().includes(lower));
+  }, [allMergedOptions, strVal, isTyping]);
+
+  // Sync highlightedIndex when dropdown opens or filtered list changes
+  useEffect(() => {
+    if (isOpen && filteredOptions.length > 0) {
+      const curIdx = filteredOptions.findIndex(
+        (o) => String(o).toLowerCase() === strVal.toLowerCase()
+      );
+      setHighlightedIndex(curIdx >= 0 ? curIdx : 0);
+    } else {
+      setHighlightedIndex(-1);
+    }
+  }, [isOpen, isTyping]);
+
+  // Auto-scroll highlighted option into view
+  useEffect(() => {
+    if (isOpen && highlightedIndex >= 0 && listRef.current) {
+      const items = listRef.current.querySelectorAll('[data-dropdown-item]');
+      if (items[highlightedIndex]) {
+        items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex, isOpen]);
 
   const handleSelectOption = (opt) => {
-    onChange(String(opt));
+    const optStr = String(opt);
+    onChange(optStr);
+    saveCustomValue(optStr);
     setIsTyping(false);
     setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+      setIsTyping(false);
+      setHighlightedIndex(-1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        setIsTyping(false);
+        setHighlightedIndex(0);
+      } else if (filteredOptions.length > 0) {
+        setHighlightedIndex((prev) => (prev + 1) % filteredOptions.length);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) {
+        setIsOpen(true);
+        setIsTyping(false);
+        setHighlightedIndex(Math.max(0, filteredOptions.length - 1));
+      } else if (filteredOptions.length > 0) {
+        setHighlightedIndex((prev) => (prev - 1 + filteredOptions.length) % filteredOptions.length);
+      }
+    } else if (e.key === 'Enter') {
+      if (isOpen) {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+          handleSelectOption(filteredOptions[highlightedIndex]);
+        } else if (strVal) {
+          saveCustomValue(strVal);
+          setIsOpen(false);
+        }
+      }
+    }
   };
 
   return (
@@ -414,40 +564,67 @@ export function EditableDropdown({
         </label>
       )}
       <div className="relative flex items-center">
-        <input
-          ref={inputRef}
-          type={type}
-          value={strVal}
-          onChange={(e) => {
-            setIsTyping(true);
-            onChange(e.target.value);
-            if (!isOpen) setIsOpen(true);
-          }}
-          onFocus={() => {
-            setIsTyping(false);
-            setIsOpen(true);
-          }}
-          onClick={() => {
-            if (!isOpen) {
+        {isTextarea ? (
+          <textarea
+            ref={inputRef}
+            rows={rows}
+            value={strVal}
+            onChange={(e) => {
+              setIsTyping(true);
+              onChange(e.target.value);
+              if (!isOpen) setIsOpen(true);
+            }}
+            onFocus={() => {
               setIsTyping(false);
               setIsOpen(true);
-            }
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setIsOpen(false);
+            }}
+            onClick={() => {
+              if (!isOpen) {
+                setIsTyping(false);
+                setIsOpen(true);
+              }
+            }}
+            onBlur={() => {
+              if (strVal) saveCustomValue(strVal);
+            }}
+            onKeyDown={handleKeyDown}
+            required={required}
+            disabled={disabled}
+            placeholder={placeholder || (label ? `Type or select ${label}...` : 'Type or select...')}
+            autoComplete="off"
+            className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-3 pr-8 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 resize-none ${className}`}
+          />
+        ) : (
+          <input
+            ref={inputRef}
+            type={type}
+            value={strVal}
+            onChange={(e) => {
+              setIsTyping(true);
+              onChange(e.target.value);
+              if (!isOpen) setIsOpen(true);
+            }}
+            onFocus={() => {
               setIsTyping(false);
-            } else if (e.key === 'ArrowDown' && !isOpen) {
               setIsOpen(true);
-              setIsTyping(false);
-            }
-          }}
-          required={required}
-          disabled={disabled}
-          placeholder={placeholder || (label ? `Type or select ${label}...` : 'Type or select...')}
-          autoComplete="off"
-          className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-3 pr-8 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`}
-        />
+            }}
+            onClick={() => {
+              if (!isOpen) {
+                setIsTyping(false);
+                setIsOpen(true);
+              }
+            }}
+            onBlur={() => {
+              if (strVal) saveCustomValue(strVal);
+            }}
+            onKeyDown={handleKeyDown}
+            required={required}
+            disabled={disabled}
+            placeholder={placeholder || (label ? `Type or select ${label}...` : 'Type or select...')}
+            autoComplete="off"
+            className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-3 pr-8 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`}
+          />
+        )}
         <button
           type="button"
           tabIndex={-1}
@@ -461,9 +638,10 @@ export function EditableDropdown({
               if (next) setIsTyping(false);
               return next;
             });
-            inputRef.current?.focus();
           }}
-          className="absolute right-1.5 p-1 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+          className={`absolute right-1.5 p-1 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors ${
+            isTextarea ? 'top-2' : ''
+          }`}
           aria-label={`Toggle ${label || 'options'} dropdown`}
         >
           <ChevronDown
@@ -474,26 +652,36 @@ export function EditableDropdown({
         </button>
       </div>
 
-      {isOpen && options.length > 0 && !disabled && (
-        <div className="absolute z-50 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg bg-slate-900 border border-slate-700 shadow-2xl py-1 text-xs divide-y divide-slate-800/40">
+      {isOpen && allMergedOptions.length > 0 && !disabled && (
+        <div
+          ref={listRef}
+          className={`absolute z-50 left-0 right-0 max-h-56 overflow-y-auto rounded-lg bg-slate-900 border border-slate-700 shadow-2xl py-1 text-xs divide-y divide-slate-800/40 ${
+            dropUp ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
           {filteredOptions.length > 0 ? (
-            filteredOptions.map((opt) => {
+            filteredOptions.map((opt, idx) => {
               const optStr = String(opt);
               const isSelected = optStr.toLowerCase() === strVal.toLowerCase();
+              const isHighlighted = idx === highlightedIndex;
               return (
                 <div
-                  key={optStr}
+                  key={`${optStr}_${idx}`}
+                  data-dropdown-item
+                  onMouseEnter={() => setHighlightedIndex(idx)}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     handleSelectOption(optStr);
                   }}
                   className={`px-3 py-1.5 cursor-pointer flex items-center justify-between transition-colors ${
-                    isSelected
+                    isHighlighted
+                      ? 'bg-emerald-600/30 text-white font-medium ring-1 ring-emerald-500/40'
+                      : isSelected
                       ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <span>{optStr}</span>
+                  <span className="truncate pr-2">{optStr}</span>
                   {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                 </div>
               );
@@ -501,27 +689,36 @@ export function EditableDropdown({
           ) : (
             <div className="p-2 space-y-1">
               <div className="px-2 py-1 text-[11px] text-amber-300 bg-amber-500/10 rounded flex items-center justify-between">
-                <span>Custom: "{strVal}"</span>
-                <span className="text-[10px] text-amber-400/80 font-mono">Custom text enabled</span>
+                <span className="truncate mr-2">Custom: "{strVal}"</span>
+                <span className="text-[10px] text-amber-400/80 font-mono shrink-0">Custom text enabled</span>
               </div>
               <div className="px-2 pt-1 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
                 All Available Options:
               </div>
-              {options.map((opt) => {
-                const optStr = String(opt);
-                return (
-                  <div
-                    key={optStr}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectOption(optStr);
-                    }}
-                    className="px-2 py-1 text-slate-300 hover:bg-slate-800 hover:text-white rounded cursor-pointer"
-                  >
-                    {optStr}
-                  </div>
-                );
-              })}
+              <div className="max-h-40 overflow-y-auto divide-y divide-slate-800/40">
+                {allMergedOptions.map((opt, idx) => {
+                  const optStr = String(opt);
+                  const isHighlighted = idx === highlightedIndex;
+                  return (
+                    <div
+                      key={`${optStr}_${idx}`}
+                      data-dropdown-item
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectOption(optStr);
+                      }}
+                      className={`px-2 py-1 rounded cursor-pointer transition-colors ${
+                        isHighlighted
+                          ? 'bg-emerald-600/30 text-white font-medium ring-1 ring-emerald-500/40'
+                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {optStr}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -564,16 +761,16 @@ export const EMPTY_FORM_STATE = {
   description: '',
   product_name: '',
   inventory: '',
-  country_of_origin: '',
+  country_of_origin: 'India',
   manufacturer_name: '',
   manufacturer_address: '',
   manufacturer_pincode: '',
   packer_name: '',
   packer_address: '',
   packer_pincode: '',
-  importer_name: '',
-  importer_address: '',
-  importer_pincode: '',
+  importer_name: 'Not Required',
+  importer_address: 'Not Required',
+  importer_pincode: 'Not Required',
   add_ons: '',
   fabric: '',
   fit_type: '',
@@ -907,9 +1104,13 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
 
   useEffect(() => {
     if (initialData && initialData.id) {
+      const isIndia = !initialData.country_of_origin || initialData.country_of_origin.trim().toLowerCase() === 'india';
       setFormData({
         ...EMPTY_FORM_STATE,
         ...initialData,
+        importer_name: isIndia ? 'Not Required' : (initialData.importer_name || ''),
+        importer_address: isIndia ? 'Not Required' : (initialData.importer_address || ''),
+        importer_pincode: isIndia ? 'Not Required' : (initialData.importer_pincode || ''),
         purchase_rate: initialData.purchase_rate != null ? initialData.purchase_rate : '',
         profit_margin: initialData.profit_margin != null ? (initialData.profit_margin <= 1 ? Math.round(initialData.profit_margin * 100) : initialData.profit_margin) : '',
         meesho_price: initialData.meesho_price != null ? initialData.meesho_price : '',
@@ -956,6 +1157,11 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const isOriginIndia = Boolean(
+    !formData.country_of_origin ||
+    formData.country_of_origin.trim().toLowerCase() === 'india'
+  );
 
   const handleChange = (field, val) => {
     setFormData((prev) => {
@@ -1051,10 +1257,16 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
 
       // 5. Country of Origin change: if India, auto-set importer fields
       if (field === 'country_of_origin') {
-        if (val && val.trim().toLowerCase() === 'india') {
+        const isIndia = !val || val.trim().toLowerCase() === 'india';
+        if (isIndia) {
           next.importer_name = 'Not Required';
           next.importer_address = 'Not Required';
           next.importer_pincode = 'Not Required';
+        } else {
+          // If changing away from India to an imported origin, clear 'Not Required' so user can enter custom values
+          if (next.importer_name === 'Not Required') next.importer_name = '';
+          if (next.importer_address === 'Not Required') next.importer_address = '';
+          if (next.importer_pincode === 'Not Required') next.importer_pincode = '';
         }
       }
 
@@ -1134,6 +1346,37 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         image_url_4: normalizeImagePath(formData.image_url_4),
       };
 
+      if (isOriginIndia) {
+        payload.importer_name = 'Not Required';
+        payload.importer_address = 'Not Required';
+        payload.importer_pincode = 'Not Required';
+      }
+
+      // Automatically store any custom entered values into dropdown histories
+      const keysToStore = [
+        'category', 'sub_category', 'product_type', 'sub_product', 'colour',
+        'sizing', 'fabric', 'fabric_composition', 'fabric_type', 'fit_type',
+        'generic_name', 'product_name', 'description', 'manufacturer_name',
+        'manufacturer_address', 'manufacturer_pincode', 'packer_name',
+        'packer_address', 'packer_pincode', 'importer_name', 'importer_address',
+        'importer_pincode', 'season', 'country_of_origin', 'sleeve_length',
+        'pockets', 'occasion', 'surface_styling', 'length'
+      ];
+      for (const k of keysToStore) {
+        const val = formData[k];
+        if (val && typeof val === 'string' && val.trim() && val.trim() !== 'Not Required') {
+          try {
+            const storageId = `divine_dropdown_${k}`;
+            const existing = JSON.parse(localStorage.getItem(storageId) || '[]');
+            if (!existing.some((x) => x.toLowerCase() === val.trim().toLowerCase())) {
+              localStorage.setItem(storageId, JSON.stringify([val.trim(), ...existing]));
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+
       if (isEdit) {
         await api.updateProduct(initialData.id, payload);
       } else {
@@ -1180,11 +1423,11 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         </div>
 
         {/* Tab Navigation for 65 Fields */}
-        <div className="flex border-b border-slate-800 bg-slate-950/60 px-4 pt-2 gap-1 overflow-x-auto text-xs font-semibold">
+        <div className="flex border-b border-slate-800 bg-slate-950/60 px-4 pt-2 gap-1 overflow-x-auto overflow-y-hidden text-xs font-semibold scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <button
             type="button"
             onClick={() => setActiveTab('pricing')}
-            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               activeTab === 'pricing'
                 ? 'border-emerald-500 text-emerald-400 bg-slate-900/60'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -1197,7 +1440,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
           <button
             type="button"
             onClick={() => setActiveTab('garment')}
-            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               activeTab === 'garment'
                 ? 'border-emerald-500 text-emerald-400 bg-slate-900/60'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -1210,7 +1453,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
           <button
             type="button"
             onClick={() => setActiveTab('logistics')}
-            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               activeTab === 'logistics'
                 ? 'border-emerald-500 text-emerald-400 bg-slate-900/60'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -1223,7 +1466,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
           <button
             type="button"
             onClick={() => setActiveTab('photos')}
-            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-3 py-2 border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
               activeTab === 'photos'
                 ? 'border-emerald-500 text-emerald-400 bg-slate-900/60'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -1235,7 +1478,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         </div>
 
         {/* Modal Form Scroll Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 pb-32">
           {error && (
             <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -1637,7 +1880,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
 
           {/* TAB 2: GARMENT SPECS & SIZING */}
           {activeTab === 'garment' && (
-            <div className="space-y-5 animate-fade-in">
+            <div className="space-y-5 animate-fade-in pb-16">
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                   <Ruler className="w-3.5 h-3.5 text-emerald-400" />
@@ -1786,7 +2029,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
 
           {/* TAB 3: MANUFACTURING & LOGISTICS */}
           {activeTab === 'logistics' && (
-            <div className="space-y-5 animate-fade-in">
+            <div className="space-y-5 animate-fade-in pb-16">
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -1920,6 +2163,56 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                   />
                 </div>
               </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Statutory Importer Disclosure
+                  </h3>
+                  {isOriginIndia ? (
+                    <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Not Required (Domestic / Origin India)
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium">
+                      Required for Non-India Origin ({formData.country_of_origin || 'Imported'})
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <EditableDropdown
+                    label="Importer Name"
+                    storageKey="importer_name"
+                    value={isOriginIndia ? 'Not Required' : (formData.importer_name || '')}
+                    onChange={(val) => !isOriginIndia && handleChange('importer_name', val)}
+                    disabled={isOriginIndia}
+                    placeholder={isOriginIndia ? 'Not Required' : 'Enter Importer Name...'}
+                    options={['Divine Enterprise', 'Pegasus Creation']}
+                  />
+
+                  <EditableDropdown
+                    label="Importer Address"
+                    storageKey="importer_address"
+                    value={isOriginIndia ? 'Not Required' : (formData.importer_address || '')}
+                    onChange={(val) => !isOriginIndia && handleChange('importer_address', val)}
+                    disabled={isOriginIndia}
+                    placeholder={isOriginIndia ? 'Not Required' : 'Enter Importer Address...'}
+                    options={STANDARD_MANUFACTURER_ADDRESSES}
+                  />
+
+                  <EditableDropdown
+                    label="Importer Pincode"
+                    storageKey="importer_pincode"
+                    value={isOriginIndia ? 'Not Required' : (formData.importer_pincode || '')}
+                    onChange={(val) => !isOriginIndia && handleChange('importer_pincode', val)}
+                    disabled={isOriginIndia}
+                    placeholder={isOriginIndia ? 'Not Required' : 'Enter Importer Pincode...'}
+                    options={STANDARD_PINCODES}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
@@ -1985,35 +2278,33 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
 
               {/* Product Name & Description */}
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Product Name (Official Meesho Title)
-                </label>
-                <input
-                  type="text"
+                <EditableDropdown
+                  label="Product Name (Official Meesho Title)"
+                  storageKey="product_name"
                   value={formData.product_name || ''}
-                  onChange={(e) => handleChange('product_name', e.target.value)}
-                  placeholder="Official Meesho Product Title..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  onChange={(val) => handleChange('product_name', val)}
+                  options={STANDARD_PRODUCT_NAMES}
+                  placeholder="Select standard title or type custom Meesho Title..."
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
-                  Product Description
-                </label>
-                <textarea
-                  rows={3}
+                <EditableDropdown
+                  label="Product Description"
+                  storageKey="description"
+                  isTextarea={true}
+                  rows={4}
                   value={formData.description || ''}
-                  onChange={(e) => handleChange('description', e.target.value)}
-                  placeholder="Provide comprehensive details about garment fabrication, fit, sleep comfort..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-emerald-500 resize-none"
+                  onChange={(val) => handleChange('description', val)}
+                  options={STANDARD_PRODUCT_DESCRIPTIONS}
+                  placeholder="Select standard description or type comprehensive custom details..."
                 />
               </div>
             </div>
           )}
 
           {/* Modal Footer */}
-          <div className="pt-4 border-t border-slate-800 flex items-center justify-between sticky bottom-0 bg-slate-900/95 backdrop-blur-md">
+          <div className="pt-3 pb-1 border-t border-slate-800 flex items-center justify-between sticky bottom-0 bg-slate-900/95 backdrop-blur-md z-10">
             <div className="text-xs text-slate-400">
               Editing: <span className="font-mono text-emerald-400">{formData.style_no || 'New SKU'}</span>
             </div>
