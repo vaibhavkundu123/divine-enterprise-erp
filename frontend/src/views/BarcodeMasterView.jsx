@@ -21,12 +21,38 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { exportToExcel } from '../utils/exportUtils';
 import ProductFormModal from '../modals/ProductFormModal';
 import ExcelImportModal from '../modals/ExcelImportModal';
+import SortableHeader from '../components/SortableHeader';
+import useTableControls from '../utils/useTableControls';
 
+const BARCODE_MASTER_COLUMNS = [
+  { key: 'sl_no', label: 'SL No.', sortable: true, filterable: true, getValue: (p, idx) => p.sl_no ?? '' },
+  { key: 'season', label: 'Season', sortable: true, filterable: true, getValue: (p) => p.season || 'Everyday' },
+  { key: 'style_no', label: 'Style No.', sortable: true, filterable: true },
+  { key: 'category', label: 'Category', sortable: true, filterable: true },
+  { key: 'sub_category', label: 'Sub Category', sortable: true, filterable: true },
+  { key: 'product_type', label: 'Product (Neck)', sortable: true, filterable: true },
+  { key: 'sub_product', label: 'Sub Product', sortable: true, filterable: true, getValue: (p) => p.sub_product || 'SINGLE DRESS' },
+  { key: 'fabric_composition', label: 'Fabric Comp.', sortable: true, filterable: true, getValue: (p) => p.fabric_composition || 'Woven' },
+  { key: 'fabric_type', label: 'Fabric Type', sortable: true, filterable: true, getValue: (p) => p.fabric_type || 'Woven' },
+  { key: 'no_of_components', label: 'Components', sortable: true, filterable: true, getValue: (p) => p.no_of_components ?? 1 },
+  { key: 'colour', label: 'Colour', sortable: true, filterable: true },
+  { key: 'sizing', label: 'Sizing', sortable: true, filterable: true },
+  { key: 'num_size_per_set', label: 'Size / Set', sortable: true, filterable: true, getValue: (p) => p.num_size_per_set ?? 1 },
+  { key: 'individual_barcode', label: 'Individual Barcode', sortable: true, filterable: true },
+  { key: 'purchase_rate', label: 'Purchase Rate', sortable: true, filterable: true },
+  { key: 'profit_margin', label: 'Profit %', sortable: true, filterable: true, getValue: (p) => p.profit_margin !== undefined && p.profit_margin !== null ? `${(p.profit_margin * 100).toFixed(0)}%` : '' },
+  { key: 'meesho_price', label: 'Meesho Price', sortable: true, filterable: true },
+  { key: 'mrp_pcs', label: 'MRP (pcs)', sortable: true, filterable: true },
+  { key: 'mrp_set', label: 'MRP (set)', sortable: true, filterable: true, getValue: (p) => p.mrp_set || p.mrp_pcs || 0 },
+  { key: 'pack_barcode', label: 'Pack Barcode', sortable: true, filterable: true },
+  { key: 'stock_on_hand', label: 'Stock', sortable: true, filterable: true },
+];
 
 export default function BarcodeMasterView() {
   const [products, setProducts] = useState([]);
@@ -98,8 +124,8 @@ export default function BarcodeMasterView() {
     }
   };
 
-  // Filtered products
-  const filteredProducts = useMemo(() => {
+  // Base filtered products (from global search, color pill, neck pill)
+  const baseFilteredProducts = useMemo(() => {
     return products.filter((p) => {
       if (search) {
         const q = search.toLowerCase();
@@ -116,6 +142,53 @@ export default function BarcodeMasterView() {
       return true;
     });
   }, [products, search, selectedColor, selectedNeck]);
+
+  // Column sort & filter controls
+  const {
+    sortConfig,
+    columnFilters,
+    requestSort,
+    clearSort,
+    getUniqueValues,
+    getValueCounts,
+    isFilterActive,
+    toggleFilterValue,
+    selectOnlyFilter,
+    selectAllFilter,
+    deselectAllFilter,
+    clearFilter,
+    clearAllFilters,
+    activeFilterCount,
+    processedData: filteredProducts,
+  } = useTableControls({ data: baseFilteredProducts, columns: BARCODE_MASTER_COLUMNS });
+
+  const sharedHeaderProps = {
+    sortConfig,
+    columnFilters,
+    onSort: requestSort,
+    clearSort,
+    getUniqueValues,
+    getValueCounts,
+    isFilterActive,
+    onToggleFilter: toggleFilterValue,
+    onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter,
+    onDeselectAll: deselectAllFilter,
+    onClearFilter: clearFilter,
+  };
+
+  const handleDelete = async (item) => {
+    const confirmMsg = `Are you sure you want to permanently delete SKU "${item.style_no}" (${item.colour || ''} - ${item.sizing || ''})?\n\nThis will also remove it from Barcode Master.xlsx and Meesho catalog workbooks.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.deleteProduct(item.id);
+      showToast(`Deleted SKU ${item.style_no} successfully.`);
+      loadData();
+    } catch (err) {
+      alert(`Failed to delete SKU: ${err.message}`);
+    }
+  };
 
   const neckTypes = useMemo(() => {
     const set = new Set();
@@ -472,6 +545,18 @@ export default function BarcodeMasterView() {
         </div>
 
         <div className="flex items-center gap-3">
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="px-2.5 py-1 text-xs rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Clear all active column filters"
+            >
+              <Filter className="w-3 h-3" />
+              <span>Filters ({activeFilterCount})</span>
+              <span className="text-emerald-400 font-bold ml-0.5">✕</span>
+            </button>
+          )}
           <div className="flex border border-slate-800 rounded-lg overflow-hidden p-0.5 bg-slate-950">
             <button
               onClick={() => setTableMode('compact')}
@@ -502,27 +587,41 @@ export default function BarcodeMasterView() {
           <table className="w-full text-left text-xs whitespace-nowrap">
             <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 uppercase tracking-wider font-semibold">
               <tr>
-                <th className="py-3 px-3">SL No.</th>
-                {tableMode === 'full' && <th className="py-3 px-3">Season</th>}
-                <th className="py-3 px-3">Style No.</th>
-                <th className="py-3 px-3">Category</th>
-                <th className="py-3 px-3">Sub Category</th>
-                <th className="py-3 px-3">Product (Neck)</th>
-                {tableMode === 'full' && <th className="py-3 px-3">Sub Product</th>}
-                {tableMode === 'full' && <th className="py-3 px-3">Fabric Comp.</th>}
-                {tableMode === 'full' && <th className="py-3 px-3">Fabric Type</th>}
-                {tableMode === 'full' && <th className="py-3 px-3 text-center">Components</th>}
-                <th className="py-3 px-3">Colour</th>
-                <th className="py-3 px-3">Sizing</th>
-                {tableMode === 'full' && <th className="py-3 px-3 text-center">Size / Set</th>}
-                <th className="py-3 px-3 font-mono">Individual Barcode</th>
-                <th className="py-3 px-3 text-right">Purchase Rate</th>
-                <th className="py-3 px-3 text-right">Profit %</th>
-                <th className="py-3 px-3 text-right">Meesho Price</th>
-                <th className="py-3 px-3 text-right">MRP (pcs)</th>
-                {tableMode === 'full' && <th className="py-3 px-3 text-right">MRP (set)</th>}
-                <th className="py-3 px-3 font-mono">Pack Barcode</th>
-                <th className="py-3 px-3 text-center">Stock</th>
+                <SortableHeader label="SL No." columnKey="sl_no" sortable filterable align="left" {...sharedHeaderProps} />
+                {tableMode === 'full' && (
+                  <SortableHeader label="Season" columnKey="season" sortable filterable {...sharedHeaderProps} />
+                )}
+                <SortableHeader label="Style No." columnKey="style_no" sortable filterable {...sharedHeaderProps} />
+                <SortableHeader label="Category" columnKey="category" sortable filterable {...sharedHeaderProps} />
+                <SortableHeader label="Sub Category" columnKey="sub_category" sortable filterable {...sharedHeaderProps} />
+                <SortableHeader label="Product (Neck)" columnKey="product_type" sortable filterable {...sharedHeaderProps} />
+                {tableMode === 'full' && (
+                  <SortableHeader label="Sub Product" columnKey="sub_product" sortable filterable {...sharedHeaderProps} />
+                )}
+                {tableMode === 'full' && (
+                  <SortableHeader label="Fabric Comp." columnKey="fabric_composition" sortable filterable {...sharedHeaderProps} />
+                )}
+                {tableMode === 'full' && (
+                  <SortableHeader label="Fabric Type" columnKey="fabric_type" sortable filterable {...sharedHeaderProps} />
+                )}
+                {tableMode === 'full' && (
+                  <SortableHeader label="Components" columnKey="no_of_components" sortable filterable align="center" {...sharedHeaderProps} />
+                )}
+                <SortableHeader label="Colour" columnKey="colour" sortable filterable {...sharedHeaderProps} />
+                <SortableHeader label="Sizing" columnKey="sizing" sortable filterable {...sharedHeaderProps} />
+                {tableMode === 'full' && (
+                  <SortableHeader label="Size / Set" columnKey="num_size_per_set" sortable filterable align="center" {...sharedHeaderProps} />
+                )}
+                <SortableHeader label="Individual Barcode" columnKey="individual_barcode" sortable filterable className="font-mono" {...sharedHeaderProps} />
+                <SortableHeader label="Purchase Rate" columnKey="purchase_rate" sortable filterable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Profit %" columnKey="profit_margin" sortable filterable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Meesho Price" columnKey="meesho_price" sortable filterable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="MRP (pcs)" columnKey="mrp_pcs" sortable filterable align="right" {...sharedHeaderProps} />
+                {tableMode === 'full' && (
+                  <SortableHeader label="MRP (set)" columnKey="mrp_set" sortable filterable align="right" {...sharedHeaderProps} />
+                )}
+                <SortableHeader label="Pack Barcode" columnKey="pack_barcode" sortable filterable className="font-mono" {...sharedHeaderProps} />
+                <SortableHeader label="Stock" columnKey="stock_on_hand" sortable filterable align="center" {...sharedHeaderProps} />
                 <th className="py-3 px-3 text-center sticky right-0 bg-slate-950/90 backdrop-blur-md">Actions</th>
               </tr>
             </thead>
@@ -610,6 +709,13 @@ export default function BarcodeMasterView() {
                         title="Print Hangtag"
                       >
                         <Printer className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p)}
+                        className="p-1 rounded hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 transition-colors"
+                        title="Delete SKU from Catalog"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </td>

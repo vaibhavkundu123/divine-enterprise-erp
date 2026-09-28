@@ -149,3 +149,33 @@ def test_all_catalog_fields_present(client):
     for field in expected_fields:
         assert field in item, f"Missing field in catalog response: {field}"
 
+def test_delete_catalog_product(client):
+    import uuid
+    uid = uuid.uuid4().hex[:6].upper()
+    # Create temporary SKU
+    payload = {
+        "style_no": f"TESTDEL_{uid}",
+        "category": "Women",
+        "sub_category": "Nightdress",
+        "product_type": "Maxi",
+        "colour": "Gold",
+        "sizing": "XXL",
+        "purchase_rate": 150.0,
+        "profit_margin": 0.20,
+        "meesho_price": 240.0,
+        "mrp_pcs": 499.0
+    }
+    create_res = client.post("/api/catalog", json=payload)
+    assert create_res.status_code == 201
+    prod_id = create_res.json()["id"]
+
+    # Delete it
+    del_res = client.delete(f"/api/catalog/{prod_id}")
+    assert del_res.status_code == 200
+    assert del_res.json()["success"] is True
+
+    # Verify 404 on get
+    get_res = client.get(f"/api/catalog/{prod_id}")
+    assert get_res.status_code == 404
+
+

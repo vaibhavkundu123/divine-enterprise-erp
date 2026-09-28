@@ -149,6 +149,7 @@ export const api = {
   lookupBarcode: (code) => request(`/catalog/barcode/${encodeURIComponent(code)}`),
   createProduct: (data) => request('/catalog', { method: 'POST', body: JSON.stringify(data) }),
   updateProduct: (id, data) => request(`/catalog/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProduct: (id) => request(`/catalog/${id}`, { method: 'DELETE' }),
   batchUpdateImages: (updates) => request('/catalog/batch-images', { method: 'POST', body: JSON.stringify({ updates }) }),
   uploadProductImage: async (file) => {
     const formData = new FormData();

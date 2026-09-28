@@ -387,6 +387,35 @@ def update_catalog_product(
 
     return product.to_dict()
 
+@router.delete("/{product_id}")
+def delete_catalog_product(product_id: int, db: Session = Depends(get_db)):
+    """Delete a catalog product and sync Excel workbooks"""
+    product = db.query(ProductCatalog).filter(ProductCatalog.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    style_no = product.style_no
+    barcode = product.individual_barcode
+    db.delete(product)
+    db.commit()
+
+    # Keep physical Excel files synchronized immediately upon deletion
+    try:
+        export_barcode_master_workbook(db)
+        export_meesho_template_workbook(db)
+    except Exception as e:
+        print(f"Warning syncing excel workbooks on delete: {e}")
+
+    log_audit(
+        db,
+        category="STOCK",
+        action="DELETE",
+        summary=f"Deleted catalog product {style_no} ({barcode})",
+        details=f"Product ID: {product_id}, Style: {style_no}, Barcode: {barcode}",
+    )
+
+    return {"success": True, "message": f"Product {style_no} deleted successfully", "id": product_id}
+
 @router.post("", status_code=201)
 def create_catalog_product(payload: ProductCreateSchema, db: Session = Depends(get_db)):
     """Create a new SKU / product entry and sync immediately to both Excel workbooks"""

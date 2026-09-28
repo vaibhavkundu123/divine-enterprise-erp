@@ -23,12 +23,66 @@ import {
   Upload,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { exportToExcel } from '../utils/exportUtils';
 import ProductFormModal from '../modals/ProductFormModal';
 import ExcelImportModal from '../modals/ExcelImportModal';
+import SortableHeader from '../components/SortableHeader';
+import useTableControls from '../utils/useTableControls';
 
+const MEESHO_CATALOG_COLUMNS = [
+  { key: 'image_url', label: 'Photo', sortable: true, filterable: true, getValue: (p) => p.image_url ? 'Has Photo' : 'No Photo' },
+  { key: 'style_no', label: 'Product / Style ID', sortable: true, filterable: true },
+  { key: 'product_name', label: 'Product Name', sortable: true, filterable: true, getValue: (p) => p.product_name || 'Cotton Nighty for Women' },
+  { key: 'sizing', label: 'Variation', sortable: true, filterable: true, getValue: (p) => p.sizing || 'XXL' },
+  { key: 'meesho_price', label: 'Meesho Price', sortable: true, filterable: true, numeric: true },
+  { key: 'wrong_return_price', label: 'Wrong Return', sortable: true, filterable: true, numeric: true, getValue: (p) => p.wrong_return_price ?? '' },
+  { key: 'mrp_pcs', label: 'MRP', sortable: true, filterable: true, numeric: true },
+  { key: 'gst_pct', label: 'GST %', sortable: true, filterable: true, numeric: true, getValue: (p) => p.gst_pct !== null && p.gst_pct !== undefined ? `${p.gst_pct}%` : '5%' },
+  { key: 'hsn_id', label: 'HSN ID', sortable: true, filterable: true, getValue: (p) => p.hsn_id || '620821' },
+  { key: 'net_weight_gms', label: 'Net Weight', sortable: true, filterable: true, numeric: true, getValue: (p) => p.net_weight_gms || 285 },
+  { key: 'inventory', label: 'Inventory', sortable: true, filterable: true, numeric: true, getValue: (p) => p.inventory || p.stock_on_hand || 10 },
+  { key: 'colour', label: 'Color', sortable: true, filterable: true },
+  { key: 'country_of_origin', label: 'Country of Origin', sortable: true, filterable: true, getValue: (p) => p.country_of_origin || 'India' },
+  { key: 'manufacturer_name', label: 'Manufacturer', sortable: true, filterable: true, getValue: (p) => p.manufacturer_name || 'Pegasus Creation' },
+  { key: 'manufacturer_address', label: 'Mfg Address', sortable: true, filterable: true, getValue: (p) => p.manufacturer_address || 'Prasanta Apartment, Check Post' },
+  { key: 'manufacturer_pincode', label: 'Mfg Pincode', sortable: true, filterable: true, getValue: (p) => p.manufacturer_pincode || '700125' },
+  { key: 'packer_name', label: 'Packer Name', sortable: true, filterable: true, getValue: (p) => p.packer_name || 'Divine Enterprise' },
+  { key: 'packer_address', label: 'Packer Address', sortable: true, filterable: true, getValue: (p) => p.packer_address || 'Prasanta Apartment, Check Post' },
+  { key: 'packer_pincode', label: 'Packer Pincode', sortable: true, filterable: true, getValue: (p) => p.packer_pincode || '700125' },
+  { key: 'importer_name', label: 'Importer', sortable: true, filterable: true, getValue: (p) => p.importer_name || '-' },
+  { key: 'importer_address', label: 'Importer Address', sortable: true, filterable: true, getValue: (p) => p.importer_address || '-' },
+  { key: 'importer_pincode', label: 'Importer Pincode', sortable: true, filterable: true, getValue: (p) => p.importer_pincode || '-' },
+  { key: 'add_ons', label: 'Add Ons', sortable: true, filterable: true, getValue: (p) => p.add_ons || 'No Add Ons' },
+  { key: 'fabric', label: 'Fabric', sortable: true, filterable: true, getValue: (p) => p.fabric || 'Cotton' },
+  { key: 'fit_type', label: 'Fit/Type', sortable: true, filterable: true, getValue: (p) => p.fit_type || 'Dress' },
+  { key: 'generic_name', label: 'Generic Name', sortable: true, filterable: true, getValue: (p) => p.generic_name || 'Maxi' },
+  { key: 'net_quantity', label: 'Net Qty', sortable: true, filterable: true, getValue: (p) => p.net_quantity || '1' },
+  { key: 'bust_size', label: 'Bust Size', sortable: true, filterable: true, numeric: true, getValue: (p) => p.bust_size || 42 },
+  { key: 'length_size', label: 'Length Size', sortable: true, filterable: true, numeric: true, getValue: (p) => p.length_size || 54 },
+  { key: 'image_url_2', label: 'Image 2', sortable: true, filterable: true, getValue: (p) => p.image_url_2 ? 'Has Image 2' : 'No Image' },
+  { key: 'image_url_3', label: 'Image 3', sortable: true, filterable: true, getValue: (p) => p.image_url_3 ? 'Has Image 3' : 'No Image' },
+  { key: 'image_url_4', label: 'Image 4', sortable: true, filterable: true, getValue: (p) => p.image_url_4 ? 'Has Image 4' : 'No Image' },
+  { key: 'sku_id', label: 'SKU ID', sortable: true, filterable: true, getValue: (p) => p.sku_id || p.individual_barcode || '' },
+  { key: 'brand_name', label: 'Brand Name', sortable: true, filterable: true, getValue: (p) => p.brand_name || '-' },
+  { key: 'group_id', label: 'Group ID', sortable: true, filterable: true, getValue: (p) => p.group_id || '-' },
+  { key: 'description', label: 'Description', sortable: true, filterable: true, getValue: (p) => p.description || '-' },
+  { key: 'ean_upc', label: 'EAN/UPC', sortable: true, filterable: true, getValue: (p) => p.ean_upc || '-' },
+  { key: 'brand', label: 'Brand', sortable: true, filterable: true, getValue: (p) => p.brand || '-' },
+  { key: 'length', label: 'Length', sortable: true, filterable: true, getValue: (p) => p.length || 'Maxi' },
+  { key: 'neck', label: 'Neck', sortable: true, filterable: true, getValue: (p) => p.neck || p.product_type || 'Square Neck' },
+  { key: 'occasion', label: 'Occasion', sortable: true, filterable: true, getValue: (p) => p.occasion || 'Everyday' },
+  { key: 'pattern', label: 'Pattern', sortable: true, filterable: true, getValue: (p) => p.pattern || 'Printed' },
+  { key: 'pockets', label: 'Pockets', sortable: true, filterable: true, getValue: (p) => p.pockets || 'No Pocket' },
+  { key: 'print_type', label: 'Print Type', sortable: true, filterable: true, getValue: (p) => p.print_type || 'Botanical' },
+  { key: 'sleeve_length', label: 'Sleeve Length', sortable: true, filterable: true, getValue: (p) => p.sleeve_length || p.sub_category || 'Sleeveless' },
+  { key: 'surface_styling', label: 'Surface Styling', sortable: true, filterable: true, getValue: (p) => p.surface_styling || 'Pleated Or Gathered' },
+  { key: 'hip_size', label: 'Hip Size', sortable: true, filterable: true, numeric: true, getValue: (p) => p.hip_size || 44 },
+  { key: 'waist_size', label: 'Waist Size', sortable: true, filterable: true, numeric: true, getValue: (p) => p.waist_size || 36 },
+  { key: 'dimensions', label: 'Dimensions', sortable: true, filterable: true, getValue: (p) => `Bust ${p.bust_size || 42} • Len ${p.length_size || 54}` },
+];
 
 export default function MeeshoCatalogView() {
   const [products, setProducts] = useState([]);
@@ -36,6 +90,7 @@ export default function MeeshoCatalogView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
   // Filters
@@ -111,8 +166,8 @@ export default function MeeshoCatalogView() {
     }
   };
 
-  // Filtered products
-  const filteredProducts = useMemo(() => {
+  // Base search and dropdown filters
+  const baseFilteredProducts = useMemo(() => {
     return products.filter((p) => {
       if (search) {
         const q = search.toLowerCase();
@@ -129,10 +184,57 @@ export default function MeeshoCatalogView() {
     });
   }, [products, search, selectedColor, selectedNeck]);
 
+  // Enhanced Excel-style sorting and multi-column filtering
+  const {
+    sortConfig,
+    columnFilters,
+    requestSort,
+    clearSort,
+    getUniqueValues,
+    getValueCounts,
+    isFilterActive,
+    toggleFilterValue,
+    selectOnlyFilter,
+    selectAllFilter,
+    deselectAllFilter,
+    clearFilter,
+    clearAllFilters,
+    activeFilterCount,
+    processedData: filteredProducts,
+  } = useTableControls({ data: baseFilteredProducts, columns: MEESHO_CATALOG_COLUMNS });
+
+  const sharedHeaderProps = {
+    sortConfig,
+    columnFilters,
+    onSort: requestSort,
+    clearSort,
+    getUniqueValues,
+    getValueCounts,
+    isFilterActive,
+    onToggleFilter: toggleFilterValue,
+    onSelectOnlyFilter: selectOnlyFilter,
+    onSelectAll: selectAllFilter,
+    onDeselectAll: deselectAllFilter,
+    onClearFilter: clearFilter,
+  };
+
+  const handleDelete = async (item) => {
+    const confirmMsg = `Are you sure you want to permanently delete SKU "${item.style_no}" (${item.colour || ''} - ${item.sizing || ''})?\n\nThis will also remove it from Barcode Master.xlsx and Meesho catalog workbooks.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.deleteProduct(item.id);
+      showToast(`Deleted SKU ${item.style_no} successfully.`);
+      loadData();
+    } catch (err) {
+      alert(`Failed to delete SKU: ${err.message}`);
+    }
+  };
+
   // Reset page when search or filters change
   useEffect(() => {
     setPage(1);
-  }, [search, selectedColor, selectedNeck]);
+  }, [search, selectedColor, selectedNeck, columnFilters, sortConfig]);
 
   const totalPages = useMemo(() => {
     if (pageSize === 'all') return 1;
@@ -356,6 +458,18 @@ export default function MeeshoCatalogView() {
         </div>
 
         <div className="flex items-center gap-3">
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition-colors"
+              title="Clear all active column filters"
+            >
+              <span>Filters ({activeFilterCount})</span>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           {viewMode === 'table' && (
             <div className="flex border border-slate-800 rounded-lg overflow-hidden p-0.5 bg-slate-950">
               <button
@@ -506,13 +620,22 @@ export default function MeeshoCatalogView() {
                 <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
                   <Check className="w-3 h-3" /> Image 1 Ready
                 </span>
-                <button
-                  onClick={() => setEditProduct({ ...p })}
-                  className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1 text-xs"
-                >
-                  <Edit3 className="w-3 h-3" />
-                  <span>Edit Details</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setEditProduct({ ...p })}
+                    className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center gap-1 text-xs"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p)}
+                    className="p-1.5 rounded bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 flex items-center gap-1 text-xs transition-colors"
+                    title="Delete SKU from Catalog"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -524,63 +647,63 @@ export default function MeeshoCatalogView() {
             <table className="w-full text-left text-xs whitespace-nowrap">
               <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800 uppercase tracking-wider font-semibold">
                 <tr>
-                  <th className="py-3 px-3">Photo</th>
-                  <th className="py-3 px-3">Product / Style ID</th>
-                  <th className="py-3 px-3">Product Name</th>
-                  <th className="py-3 px-3">Variation</th>
-                  <th className="py-3 px-3 text-right">Meesho Price</th>
-                  <th className="py-3 px-3 text-right">Wrong Return</th>
-                  <th className="py-3 px-3 text-right">MRP</th>
-                  <th className="py-3 px-3 text-center">GST %</th>
-                  <th className="py-3 px-3 text-center">HSN ID</th>
-                  <th className="py-3 px-3 text-center">Net Weight</th>
-                  <th className="py-3 px-3 text-center">Inventory</th>
-                  <th className="py-3 px-3">Color</th>
+                  <SortableHeader label="Photo" columnKey="image_url" sortable filterable align="center" {...sharedHeaderProps} />
+                  <SortableHeader label="Product / Style ID" columnKey="style_no" sortable filterable {...sharedHeaderProps} />
+                  <SortableHeader label="Product Name" columnKey="product_name" sortable filterable {...sharedHeaderProps} />
+                  <SortableHeader label="Variation" columnKey="sizing" sortable filterable {...sharedHeaderProps} />
+                  <SortableHeader label="Meesho Price" columnKey="meesho_price" sortable filterable align="right" {...sharedHeaderProps} />
+                  <SortableHeader label="Wrong Return" columnKey="wrong_return_price" sortable filterable align="right" {...sharedHeaderProps} />
+                  <SortableHeader label="MRP" columnKey="mrp_pcs" sortable filterable align="right" {...sharedHeaderProps} />
+                  <SortableHeader label="GST %" columnKey="gst_pct" sortable filterable align="center" {...sharedHeaderProps} />
+                  <SortableHeader label="HSN ID" columnKey="hsn_id" sortable filterable align="center" {...sharedHeaderProps} />
+                  <SortableHeader label="Net Weight" columnKey="net_weight_gms" sortable filterable align="center" {...sharedHeaderProps} />
+                  <SortableHeader label="Inventory" columnKey="inventory" sortable filterable align="center" {...sharedHeaderProps} />
+                  <SortableHeader label="Color" columnKey="colour" sortable filterable {...sharedHeaderProps} />
                   {meeshoTableMode === 'full' && (
                     <>
-                      <th className="py-3 px-3">Country of Origin</th>
-                      <th className="py-3 px-3">Manufacturer</th>
-                      <th className="py-3 px-3">Mfg Address</th>
-                      <th className="py-3 px-3">Mfg Pincode</th>
-                      <th className="py-3 px-3">Packer Name</th>
-                      <th className="py-3 px-3">Packer Address</th>
-                      <th className="py-3 px-3">Packer Pincode</th>
-                      <th className="py-3 px-3">Importer</th>
-                      <th className="py-3 px-3">Importer Address</th>
-                      <th className="py-3 px-3">Importer Pincode</th>
-                      <th className="py-3 px-3">Add Ons</th>
-                      <th className="py-3 px-3">Fabric</th>
-                      <th className="py-3 px-3">Fit/Type</th>
-                      <th className="py-3 px-3">Generic Name</th>
-                      <th className="py-3 px-3 text-center">Net Qty</th>
-                      <th className="py-3 px-3 text-center">Bust Size</th>
-                      <th className="py-3 px-3 text-center">Length Size</th>
-                      <th className="py-3 px-3">Image 2</th>
-                      <th className="py-3 px-3">Image 3</th>
-                      <th className="py-3 px-3">Image 4</th>
-                      <th className="py-3 px-3 font-mono">SKU ID</th>
-                      <th className="py-3 px-3">Brand Name</th>
-                      <th className="py-3 px-3">Group ID</th>
-                      <th className="py-3 px-3 max-w-[200px]">Description</th>
-                      <th className="py-3 px-3">EAN/UPC</th>
-                      <th className="py-3 px-3">Brand</th>
-                      <th className="py-3 px-3">Length</th>
-                      <th className="py-3 px-3">Neck</th>
-                      <th className="py-3 px-3">Occasion</th>
-                      <th className="py-3 px-3">Pattern</th>
-                      <th className="py-3 px-3">Pockets</th>
-                      <th className="py-3 px-3">Print Type</th>
-                      <th className="py-3 px-3">Sleeve Length</th>
-                      <th className="py-3 px-3">Surface Styling</th>
-                      <th className="py-3 px-3 text-center">Hip Size</th>
-                      <th className="py-3 px-3 text-center">Waist Size</th>
+                      <SortableHeader label="Country of Origin" columnKey="country_of_origin" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Manufacturer" columnKey="manufacturer_name" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Mfg Address" columnKey="manufacturer_address" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Mfg Pincode" columnKey="manufacturer_pincode" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Packer Name" columnKey="packer_name" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Packer Address" columnKey="packer_address" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Packer Pincode" columnKey="packer_pincode" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Importer" columnKey="importer_name" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Importer Address" columnKey="importer_address" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Importer Pincode" columnKey="importer_pincode" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Add Ons" columnKey="add_ons" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Fabric" columnKey="fabric" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Fit/Type" columnKey="fit_type" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Generic Name" columnKey="generic_name" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Net Qty" columnKey="net_quantity" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="Bust Size" columnKey="bust_size" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="Length Size" columnKey="length_size" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="Image 2" columnKey="image_url_2" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="Image 3" columnKey="image_url_3" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="Image 4" columnKey="image_url_4" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="SKU ID" columnKey="sku_id" sortable filterable className="font-mono" {...sharedHeaderProps} />
+                      <SortableHeader label="Brand Name" columnKey="brand_name" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Group ID" columnKey="group_id" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Description" columnKey="description" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="EAN/UPC" columnKey="ean_upc" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Brand" columnKey="brand" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Length" columnKey="length" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Neck" columnKey="neck" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Occasion" columnKey="occasion" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Pattern" columnKey="pattern" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Pockets" columnKey="pockets" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Print Type" columnKey="print_type" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Sleeve Length" columnKey="sleeve_length" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Surface Styling" columnKey="surface_styling" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Hip Size" columnKey="hip_size" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="Waist Size" columnKey="waist_size" sortable filterable align="center" {...sharedHeaderProps} />
                     </>
                   )}
                   {meeshoTableMode === 'compact' && (
                     <>
-                      <th className="py-3 px-3">Neck</th>
-                      <th className="py-3 px-3 text-center">Dimensions</th>
-                      <th className="py-3 px-3 font-mono">SKU ID</th>
+                      <SortableHeader label="Neck" columnKey="neck" sortable filterable {...sharedHeaderProps} />
+                      <SortableHeader label="Dimensions" columnKey="dimensions" sortable filterable align="center" {...sharedHeaderProps} />
+                      <SortableHeader label="SKU ID" columnKey="sku_id" sortable filterable className="font-mono" {...sharedHeaderProps} />
                     </>
                   )}
                   <th className="py-3 px-3 text-center sticky right-0 bg-slate-950/90 backdrop-blur-md">Actions</th>
@@ -802,13 +925,22 @@ export default function MeeshoCatalogView() {
 
                     {/* Actions */}
                     <td className="py-2.5 px-3 text-center sticky right-0 bg-slate-950/90 backdrop-blur-md">
-                      <button
-                        onClick={() => setEditProduct({ ...p })}
-                        className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200"
-                        title="Edit Listing Attributes"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => setEditProduct({ ...p })}
+                          className="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-200"
+                          title="Edit Listing Attributes"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(p)}
+                          className="p-1 rounded hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 transition-colors"
+                          title="Delete SKU from Catalog"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
