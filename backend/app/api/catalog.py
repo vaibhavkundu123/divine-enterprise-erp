@@ -49,6 +49,32 @@ MASTER_SIZE_CODES: Dict[str, str] = {
     's': '09', 'xs': '08'
 }
 
+def normalize_image_path(path: Optional[str]) -> Optional[str]:
+    """Normalize any image path or local Windows file path to a valid web URL path (/Pic/...)"""
+    if not path or not isinstance(path, str):
+        return path
+    clean = path.strip().strip("'\"").strip()
+    if not clean:
+        return clean
+    clean = clean.replace("\\", "/")
+    lower = clean.lower()
+    pic_idx = lower.find("/pic/")
+    if pic_idx != -1:
+        return "/Pic/" + clean[pic_idx + 5:]
+    if lower.startswith("pic/"):
+        return "/Pic/" + clean[4:]
+    if clean.startswith("http://") or clean.startswith("https://") or clean.startswith("data:"):
+        return clean
+    if clean.startswith("/Pic_thumbs/"):
+        return clean
+    if clean.startswith("/Pic/"):
+        return clean
+    if clean.startswith("/pic/"):
+        return "/Pic/" + clean[5:]
+    if clean.startswith("/"):
+        return clean
+    return "/Pic/" + clean
+
 class ProductCreateSchema(BaseModel):
     @field_validator("*", mode="before")
     @classmethod
@@ -240,18 +266,25 @@ def list_catalog_products(
     proc_batches = db.query(ProcurementBatch).all()
     sales = db.query(SalesOrder).all()
 
-    inv_map = {}
+    proc_map = {}
+    sales_map = {}
     for p in proc_batches:
         st = p.style_no.strip()
-        inv_map[st] = inv_map.get(st, 0) + p.inventory
+        proc_map[st] = proc_map.get(st, 0) + p.inventory
     for s in sales:
         st = s.style_no.strip()
-        inv_map[st] = inv_map.get(st, 0) - s.quantity_sold
+        sales_map[st] = sales_map.get(st, 0) + s.quantity_sold
 
     result = []
     for item in items:
         d = item.to_dict()
-        d["stock_on_hand"] = max(0, inv_map.get(item.style_no.strip(), 0))
+        st = item.style_no.strip()
+        tot_proc = proc_map.get(st, 0)
+        tot_sales = sales_map.get(st, 0)
+        if tot_proc > 0 or tot_sales > 0:
+            d["stock_on_hand"] = max(0, tot_proc - tot_sales)
+        else:
+            d["stock_on_hand"] = item.inventory if item.inventory is not None else 0
         # Flag if price has anomaly (e.g. DE26005 shortfall or wrong return diff != 22)
         expected_wrong = item.meesho_price - 22 if item.meesho_price > 22 else 0
         d["has_price_anomaly"] = (
@@ -334,7 +367,10 @@ def resolve_barcode(code: str, db: Session = Depends(get_db)):
     tot_sold = sum(
         s.quantity_sold for s in db.query(SalesOrder).filter(SalesOrder.style_no == product.style_no).all()
     )
-    stock_on_hand = max(0, tot_purchased - tot_sold)
+    if tot_purchased > 0 or tot_sold > 0:
+        stock_on_hand = max(0, tot_purchased - tot_sold)
+    else:
+        stock_on_hand = product.inventory if product.inventory is not None else 0
 
     d = product.to_dict()
     d["stock_on_hand"] = stock_on_hand
@@ -346,7 +382,18 @@ def get_catalog_product(product_id: int, db: Session = Depends(get_db)):
     product = db.query(ProductCatalog).filter(ProductCatalog.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product.to_dict()
+    d = product.to_dict()
+    tot_purchased = sum(
+        p.inventory for p in db.query(ProcurementBatch).filter(ProcurementBatch.style_no == product.style_no).all()
+    )
+    tot_sold = sum(
+        s.quantity_sold for s in db.query(SalesOrder).filter(SalesOrder.style_no == product.style_no).all()
+    )
+    if tot_purchased > 0 or tot_sold > 0:
+        d["stock_on_hand"] = max(0, tot_purchased - tot_sold)
+    else:
+        d["stock_on_hand"] = product.inventory if product.inventory is not None else 0
+    return d
 
 @router.put("/{product_id}")
 def update_catalog_product(
@@ -359,6 +406,12 @@ def update_catalog_product(
         raise HTTPException(status_code=404, detail="Product not found")
 
     update_data = payload.model_dump(exclude_unset=True) if hasattr(payload, "model_dump") else payload.dict(exclude_unset=True)
+
+    # Auto-normalize image paths
+    for img_field in ["image_url", "image_url_2", "image_url_3", "image_url_4"]:
+        if img_field in update_data and update_data[img_field]:
+            update_data[img_field] = normalize_image_path(update_data[img_field])
+
     for field, val in update_data.items():
         setattr(product, field, val)
 
@@ -366,6 +419,22 @@ def update_catalog_product(
     if "meesho_price" in update_data and "wrong_return_price" not in update_data:
         if product.meesho_price and product.meesho_price > 22:
             product.wrong_return_price = product.meesho_price - 22
+
+    # If inventory is updated, ensure ProcurementBatch reflects it or create initial batch if none exists
+    if "inventory" in update_data and update_data["inventory"] is not None:
+        batches = db.query(ProcurementBatch).filter(ProcurementBatch.style_no == product.style_no).all()
+        if not batches and (product.inventory or 0) > 0:
+            pb = ProcurementBatch(
+                date=datetime.now().strftime("%Y-%m-%d"),
+                style_no=product.style_no,
+                inventory=product.inventory,
+                purchase_rate=product.purchase_rate or 0.0,
+                total_value=round((product.inventory or 0) * (product.purchase_rate or 0.0), 2),
+            )
+            db.add(pb)
+        elif len(batches) == 1:
+            batches[0].inventory = product.inventory
+            batches[0].total_value = round((product.inventory or 0) * (batches[0].purchase_rate or product.purchase_rate or 0.0), 2)
 
     db.commit()
     db.refresh(product)
@@ -477,10 +546,10 @@ def create_catalog_product(payload: ProductCreateSchema, db: Session = Depends(g
         mrp_pcs=payload.mrp_pcs or 499.0,
         mrp_set=payload.mrp_set or 499.0,
         pack_barcode=pack_bc.strip(),
-        image_url=payload.image_url,
-        image_url_2=payload.image_url_2,
-        image_url_3=payload.image_url_3,
-        image_url_4=payload.image_url_4,
+        image_url=normalize_image_path(payload.image_url),
+        image_url_2=normalize_image_path(payload.image_url_2),
+        image_url_3=normalize_image_path(payload.image_url_3),
+        image_url_4=normalize_image_path(payload.image_url_4),
         hsn_id=payload.hsn_id or "620821",
         gst_pct=payload.gst_pct or 5.0,
         net_weight_gms=payload.net_weight_gms or 285,
@@ -488,7 +557,7 @@ def create_catalog_product(payload: ProductCreateSchema, db: Session = Depends(g
         is_active=True,
         # Complete Meesho template attributes
         product_name=payload.product_name,
-        inventory=payload.inventory or 10,
+        inventory=payload.inventory if payload.inventory is not None else 10,
         country_of_origin=payload.country_of_origin or "India",
         manufacturer_name=payload.manufacturer_name or "Pegasus Creation",
         manufacturer_address=payload.manufacturer_address or "Prasanta Apartment, Check Post",
@@ -525,6 +594,20 @@ def create_catalog_product(payload: ProductCreateSchema, db: Session = Depends(g
     db.add(new_prod)
     db.commit()
     db.refresh(new_prod)
+
+    # Ensure initial ProcurementBatch exists for stock tracking if inventory > 0
+    if new_prod.inventory and new_prod.inventory > 0:
+        existing_batch = db.query(ProcurementBatch).filter(ProcurementBatch.style_no == new_prod.style_no).first()
+        if not existing_batch:
+            pb = ProcurementBatch(
+                date=datetime.now().strftime("%Y-%m-%d"),
+                style_no=new_prod.style_no,
+                inventory=new_prod.inventory,
+                purchase_rate=new_prod.purchase_rate or 0.0,
+                total_value=round((new_prod.inventory or 0) * (new_prod.purchase_rate or 0.0), 2),
+            )
+            db.add(pb)
+            db.commit()
 
     # Sync to Excel files
     try:

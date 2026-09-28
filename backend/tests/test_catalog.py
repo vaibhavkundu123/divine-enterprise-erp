@@ -178,4 +178,55 @@ def test_delete_catalog_product(client):
     get_res = client.get(f"/api/catalog/{prod_id}")
     assert get_res.status_code == 404
 
+def test_image_path_normalization_and_stock(client):
+    import uuid
+    uid = uuid.uuid4().hex[:6].upper()
+    style = f"TESTIMG_{uid}"
+    payload = {
+        "style_no": style,
+        "category": "Nighty",
+        "sub_category": "Sleeveless",
+        "product_type": "Square Neck",
+        "colour": "Blue",
+        "sizing": "XXL",
+        "purchase_rate": 185.0,
+        "profit_margin": 0.20,
+        "meesho_price": 280.0,
+        "inventory": 6,
+        "image_url": r"D:\Business Website\Pic\DE26011\Blue\Blue_1.jpg",
+        "image_url_2": r'"D:\Business Website\Pic\DE26011\Blue\Blue_2.jpg"',
+        "image_url_3": "DE26011/Blue/Blue_3.jpg",
+    }
+    create_res = client.post("/api/catalog", json=payload)
+    assert create_res.status_code == 201
+    created = create_res.json()
+    prod_id = created["id"]
+
+    assert created["image_url"] == "/Pic/DE26011/Blue/Blue_1.jpg"
+    assert created["image_url_2"] == "/Pic/DE26011/Blue/Blue_2.jpg"
+    assert created["image_url_3"] == "/Pic/DE26011/Blue/Blue_3.jpg"
+
+    # Verify stock in catalog listing
+    get_res = client.get(f"/api/catalog/{prod_id}")
+    assert get_res.status_code == 200
+    prod_data = get_res.json()
+    assert prod_data["stock_on_hand"] == 6
+
+    # Update with Windows path in image_url_4 and update inventory
+    upd_res = client.put(f"/api/catalog/{prod_id}", json={
+        "inventory": 15,
+        "image_url_4": r"Pic\DE26011\Blue\Blue_4.jpg"
+    })
+    assert upd_res.status_code == 200
+    updated = upd_res.json()
+    assert updated["image_url_4"] == "/Pic/DE26011/Blue/Blue_4.jpg"
+
+    # Verify stock updated
+    get_res2 = client.get(f"/api/catalog/{prod_id}")
+    assert get_res2.status_code == 200
+    assert get_res2.json()["stock_on_hand"] == 15
+
+    # Clean up
+    client.delete(f"/api/catalog/{prod_id}")
+
 

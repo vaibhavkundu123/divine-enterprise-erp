@@ -51,7 +51,7 @@ const BARCODE_MASTER_COLUMNS = [
   { key: 'mrp_pcs', label: 'MRP (pcs)', sortable: true, filterable: true },
   { key: 'mrp_set', label: 'MRP (set)', sortable: true, filterable: true, getValue: (p) => p.mrp_set || p.mrp_pcs || 0 },
   { key: 'pack_barcode', label: 'Pack Barcode', sortable: true, filterable: true },
-  { key: 'stock_on_hand', label: 'Stock', sortable: true, filterable: true },
+  { key: 'stock_on_hand', label: 'Stock', sortable: true, filterable: true, getValue: (p) => p.stock_on_hand != null ? p.stock_on_hand : (p.inventory ?? 0) },
 ];
 
 export default function BarcodeMasterView() {
@@ -260,7 +260,7 @@ export default function BarcodeMasterView() {
       'Meesho Price': p.meesho_price,
       'MRP (pcs)': p.mrp_pcs,
       'MRP (set)': p.mrp_set,
-      'Stock On Hand': p.stock_on_hand,
+      'Stock On Hand': p.stock_on_hand != null ? p.stock_on_hand : (p.inventory ?? 0),
     }));
     exportToExcel(exportData, `Barcode_Master_${new Date().toISOString().split('T')[0]}.xlsx`, 'BARCODE');
   };
@@ -688,7 +688,7 @@ export default function BarcodeMasterView() {
                   <td className="py-2.5 px-3 font-mono text-purple-300 text-[11px]">{p.pack_barcode}</td>
                   <td className="py-2.5 px-3 text-center">
                     <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300">
-                      {p.stock_on_hand}
+                      {p.stock_on_hand != null ? p.stock_on_hand : (p.inventory ?? 0)}
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-center sticky right-0 bg-slate-900/90 backdrop-blur-md">

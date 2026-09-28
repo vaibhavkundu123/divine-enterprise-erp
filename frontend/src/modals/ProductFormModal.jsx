@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -16,6 +16,7 @@ import {
   Ruler,
   Building2,
   FileSpreadsheet,
+  ChevronDown,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -301,55 +302,215 @@ export const STANDARD_HIP_SIZES = ['30', '32', '34', '36', '38', '40', '42', '44
 export const STANDARD_WAIST_SIZES = ['24', '26', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54'];
 
 /**
- * Generic reusable select dropdown for all form fields that renders standard options
- * and seamlessly preserves any custom or legacy values present in existing products.
+ * Normalizes any Windows file path (e.g. D:\Business Website\Pic\DE26011\Blue\Blue_1.jpg),
+ * relative path, or server path to a valid web URL path (/Pic/...)
  */
-export function SelectDropdown({
+export function normalizeImagePath(path) {
+  if (!path || typeof path !== 'string') return path;
+  let clean = path.trim().replace(/^["']|["']$/g, '').trim();
+  if (!clean) return clean;
+  clean = clean.replace(/\\/g, '/');
+  const lower = clean.toLowerCase();
+
+  const picIdx = lower.indexOf('/pic/');
+  if (picIdx !== -1) {
+    return '/Pic/' + clean.substring(picIdx + 5);
+  }
+  if (lower.startsWith('pic/')) {
+    return '/Pic/' + clean.substring(4);
+  }
+  if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:')) {
+    return clean;
+  }
+  if (clean.startsWith('/Pic_thumbs/')) {
+    return clean;
+  }
+  if (clean.startsWith('/Pic/')) {
+    return clean;
+  }
+  if (clean.startsWith('/pic/')) {
+    return '/Pic/' + clean.substring(5);
+  }
+  if (clean.startsWith('/')) {
+    return clean;
+  }
+  return '/Pic/' + clean;
+}
+
+export const STANDARD_MANUFACTURERS = [
+  'Pegasus Creation',
+  'Divine Enterprise',
+];
+
+export const STANDARD_MANUFACTURER_ADDRESSES = [
+  'Prasanta Apartment, Check Post',
+  'Kolkata, West Bengal',
+];
+
+export const STANDARD_PINCODES = [
+  '700125',
+  '700001',
+  '700007',
+  '110001',
+  '400001',
+];
+
+export const STANDARD_PACKERS = [
+  'Divine Enterprise',
+  'Pegasus Creation',
+];
+
+/**
+ * Universal Editable Dropdown (Combobox) component:
+ * Enables the user to freely write/type custom text into the field at any time,
+ * while ALSO providing an interactive, searchable dropdown list of standard options.
+ */
+export function EditableDropdown({
   label,
   value,
   onChange,
   options = [],
   required = false,
-  placeholder = '-- Select --',
+  placeholder = '',
   disabled = false,
   className = '',
+  type = 'text',
+  listId,
 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
   const strVal = value != null ? String(value) : '';
-  const hasCustom =
-    strVal !== '' && !options.some((opt) => String(opt).toLowerCase() === strVal.toLowerCase());
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredOptions = useMemo(() => {
+    if (!strVal) return options;
+    const lower = strVal.toLowerCase();
+    const matched = options.filter((opt) => String(opt).toLowerCase().includes(lower));
+    return matched;
+  }, [options, strVal]);
+
+  const uniqueListId = listId || (label ? `list-${label.replace(/[^a-zA-Z0-9]/g, '_')}` : undefined);
 
   return (
-    <div>
+    <div ref={containerRef} className="relative">
       {label && (
         <label className="block text-xs font-medium text-slate-300 mb-1">
           {label} {required && <span className="text-rose-400">*</span>}
         </label>
       )}
-      <select
-        value={strVal}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        disabled={disabled}
-        className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 cursor-pointer ${className}`}
-      >
-        <option value="">{placeholder}</option>
-        {hasCustom && (
-          <option value={strVal}>
-            {strVal} (Current / Custom)
-          </option>
-        )}
-        {options.map((opt) => {
-          const optStr = String(opt);
-          return (
-            <option key={optStr} value={optStr}>
-              {optStr}
-            </option>
-          );
-        })}
-      </select>
+      <div className="relative flex items-center">
+        <input
+          ref={inputRef}
+          type={type}
+          value={strVal}
+          onChange={(e) => {
+            onChange(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          required={required}
+          disabled={disabled}
+          placeholder={placeholder || (label ? `Type or select ${label}...` : 'Type or select...')}
+          list={uniqueListId}
+          autoComplete="off"
+          className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-3 pr-8 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 ${className}`}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={() => {
+            setIsOpen((prev) => !prev);
+            if (!isOpen) inputRef.current?.focus();
+          }}
+          className="absolute right-2 p-1 text-slate-400 hover:text-slate-200 focus:outline-none"
+        >
+          <ChevronDown
+            className={`w-3.5 h-3.5 transition-transform duration-150 ${
+              isOpen ? 'rotate-180 text-emerald-400' : ''
+            }`}
+          />
+        </button>
+      </div>
+
+      {uniqueListId && (
+        <datalist id={uniqueListId}>
+          {options.map((opt) => (
+            <option key={String(opt)} value={String(opt)} />
+          ))}
+        </datalist>
+      )}
+
+      {isOpen && options.length > 0 && !disabled && (
+        <div className="absolute z-50 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg bg-slate-900 border border-slate-700 shadow-2xl py-1 text-xs divide-y divide-slate-800/40">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((opt) => {
+              const optStr = String(opt);
+              const isSelected = optStr.toLowerCase() === strVal.toLowerCase();
+              return (
+                <div
+                  key={optStr}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onChange(optStr);
+                    setIsOpen(false);
+                  }}
+                  className={`px-3 py-1.5 cursor-pointer flex items-center justify-between transition-colors ${
+                    isSelected
+                      ? 'bg-emerald-500/20 text-emerald-300 font-semibold'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span>{optStr}</span>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-2 space-y-1">
+              <div className="px-2 py-1 text-[11px] text-amber-300 bg-amber-500/10 rounded flex items-center justify-between">
+                <span>Custom: "{strVal}"</span>
+                <span className="text-[10px] text-amber-400/80 font-mono">Custom text enabled</span>
+              </div>
+              <div className="px-2 pt-1 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                All Available Options:
+              </div>
+              {options.map((opt) => {
+                const optStr = String(opt);
+                return (
+                  <div
+                    key={optStr}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      onChange(optStr);
+                      setIsOpen(false);
+                    }}
+                    className="px-2 py-1 text-slate-300 hover:bg-slate-800 hover:text-white rounded cursor-pointer"
+                  >
+                    {optStr}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+// Backward compatibility alias: all form fields now allow free-text writing as well as dropdown selection
+export const SelectDropdown = EditableDropdown;
 
 export const EMPTY_FORM_STATE = {
   style_no: '',
@@ -606,13 +767,120 @@ export function evaluateBarcodeFormula(styleNo, colour, sizing) {
   };
 }
 
+/**
+ * Individual Photo Upload & Path Configuration Card:
+ * Supports instant normalization of local Windows absolute paths (e.g. D:\Business Website\Pic\...),
+ * file picking with automatic upload to server, and instant thumbnail preview.
+ */
+function PhotoUploadCard({
+  title,
+  sublabel,
+  fieldKey,
+  value,
+  preview,
+  onChange,
+  onUpload,
+  isUploading,
+}) {
+  const fileInputRef = useRef(null);
+
+  return (
+    <div className="p-3.5 border border-slate-800 rounded-xl bg-slate-950/70 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:border-slate-700">
+      <div className="relative w-24 h-32 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+        {preview ? (
+          <img
+            src={preview}
+            alt={title}
+            className="w-full h-full object-cover object-top"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              if (e.currentTarget.nextSibling) {
+                e.currentTarget.nextSibling.style.display = 'flex';
+              }
+            }}
+          />
+        ) : null}
+        <div
+          className={`flex flex-col items-center justify-center text-slate-600 gap-1 ${
+            preview ? 'hidden' : 'flex'
+          }`}
+        >
+          <ImageIcon className="w-5 h-5 text-slate-500" />
+          <span className="text-[10px] text-slate-500 font-medium">No Photo</span>
+        </div>
+      </div>
+
+      <div className="flex-1 space-y-2.5 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <span>{title}</span>
+              {value && <Check className="w-3 h-3 text-emerald-400" />}
+            </div>
+            {sublabel && <div className="text-[10px] text-slate-400">{sublabel}</div>}
+          </div>
+
+          <label className="btn-secondary text-[11px] px-3 py-1.5 flex items-center justify-center gap-1.5 cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors border border-slate-700">
+            {isUploading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Upload Image</span>
+              </>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => onUpload(fieldKey, e)}
+              disabled={isUploading}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-medium text-slate-400 mb-1">
+            Image Path or Location (e.g. <span className="font-mono text-slate-300">D:\Business Website\Pic\...</span> or <span className="font-mono text-slate-300">/Pic/...</span>)
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. D:\Business Website\Pic\DE26011\Blue\Blue_1.jpg or /Pic/..."
+            value={value || ''}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const clean = normalizeImagePath(raw);
+              onChange(fieldKey, clean);
+            }}
+            className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductFormModal({ isOpen, onClose, onSuccess, initialData = null }) {
   const isEdit = Boolean(initialData && initialData.id);
   const [activeTab, setActiveTab] = useState('pricing');
   const [formData, setFormData] = useState(EMPTY_FORM_STATE);
 
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState({
+    image_url: false,
+    image_url_2: false,
+    image_url_3: false,
+    image_url_4: false,
+  });
+  const [imagePreviews, setImagePreviews] = useState({
+    image_url: null,
+    image_url_2: null,
+    image_url_3: null,
+    image_url_4: null,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -633,11 +901,21 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         no_of_components: initialData.no_of_components != null ? initialData.no_of_components : '',
         num_size_per_set: initialData.num_size_per_set != null ? initialData.num_size_per_set : '',
       });
-      setImagePreview(initialData.thumbnail_url || initialData.image_url || null);
+      setImagePreviews({
+        image_url: initialData.thumbnail_url || (initialData.image_url ? normalizeImagePath(initialData.image_url) : null),
+        image_url_2: initialData.image_url_2 ? normalizeImagePath(initialData.image_url_2) : null,
+        image_url_3: initialData.image_url_3 ? normalizeImagePath(initialData.image_url_3) : null,
+        image_url_4: initialData.image_url_4 ? normalizeImagePath(initialData.image_url_4) : null,
+      });
     } else {
       // "+ Add New SKU": Start 100% completely empty
       setFormData({ ...EMPTY_FORM_STATE });
-      setImagePreview(null);
+      setImagePreviews({
+        image_url: null,
+        image_url_2: null,
+        image_url_3: null,
+        image_url_4: null,
+      });
     }
     setError(null);
     setActiveTab('pricing');
@@ -759,27 +1037,38 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         }
       }
 
+      // 6. Image paths normalization (auto-convert Windows paths e.g. D:\... to /Pic/...)
+      if (['image_url', 'image_url_2', 'image_url_3', 'image_url_4'].includes(field)) {
+        const norm = normalizeImagePath(val);
+        next[field] = norm;
+        setImagePreviews((p) => ({ ...p, [field]: norm }));
+      }
+
       return next;
     });
   };
 
-  const handleImageFileSelect = async (e) => {
+  const handleImageFileSelect = async (field, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingImage(true);
+    setUploadingImage((prev) => ({ ...prev, [field]: true }));
     setError(null);
     try {
       const res = await api.uploadProductImage(file);
+      const cleanPath = normalizeImagePath(res.image_url);
       setFormData((prev) => ({
         ...prev,
-        image_url: res.image_url,
+        [field]: cleanPath,
       }));
-      setImagePreview(res.thumbnail_url || res.image_url);
+      setImagePreviews((prev) => ({
+        ...prev,
+        [field]: res.thumbnail_url || cleanPath,
+      }));
     } catch (err) {
       setError(`Image upload failed: ${err.message}`);
     } finally {
-      setUploadingImage(false);
+      setUploadingImage((prev) => ({ ...prev, [field]: false }));
     }
   };
 
@@ -818,6 +1107,10 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         inventory: formData.inventory !== '' ? parseInt(formData.inventory, 10) : 10,
         no_of_components: formData.no_of_components !== '' ? parseInt(formData.no_of_components, 10) : 1,
         num_size_per_set: formData.num_size_per_set !== '' ? parseInt(formData.num_size_per_set, 10) : 1,
+        image_url: normalizeImagePath(formData.image_url),
+        image_url_2: normalizeImagePath(formData.image_url_2),
+        image_url_3: normalizeImagePath(formData.image_url_3),
+        image_url_4: normalizeImagePath(formData.image_url_4),
       };
 
       if (isEdit) {
@@ -1557,71 +1850,53 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                   Statutory Manufacturer & Packer Disclosure
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Manufacturer Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Pegasus Creation"
-                      value={formData.manufacturer_name}
-                      onChange={(e) => handleChange('manufacturer_name', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <EditableDropdown
+                    label="Manufacturer Name"
+                    value={formData.manufacturer_name}
+                    onChange={(val) => handleChange('manufacturer_name', val)}
+                    options={STANDARD_MANUFACTURERS}
+                    placeholder="e.g. Pegasus Creation"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Manufacturer Address</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Prasanta Apartment, Check Post"
-                      value={formData.manufacturer_address}
-                      onChange={(e) => handleChange('manufacturer_address', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <EditableDropdown
+                    label="Manufacturer Address"
+                    value={formData.manufacturer_address}
+                    onChange={(val) => handleChange('manufacturer_address', val)}
+                    options={STANDARD_MANUFACTURER_ADDRESSES}
+                    placeholder="e.g. Prasanta Apartment, Check Post"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Manufacturer Pincode</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 700125"
-                      value={formData.manufacturer_pincode}
-                      onChange={(e) => handleChange('manufacturer_pincode', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <EditableDropdown
+                    label="Manufacturer Pincode"
+                    value={formData.manufacturer_pincode}
+                    onChange={(val) => handleChange('manufacturer_pincode', val)}
+                    options={STANDARD_PINCODES}
+                    placeholder="e.g. 700125"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Packer Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Divine Enterprise"
-                      value={formData.packer_name}
-                      onChange={(e) => handleChange('packer_name', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <EditableDropdown
+                    label="Packer Name"
+                    value={formData.packer_name}
+                    onChange={(val) => handleChange('packer_name', val)}
+                    options={STANDARD_PACKERS}
+                    placeholder="e.g. Divine Enterprise"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Packer Address</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Prasanta Apartment, Check Post"
-                      value={formData.packer_address}
-                      onChange={(e) => handleChange('packer_address', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <EditableDropdown
+                    label="Packer Address"
+                    value={formData.packer_address}
+                    onChange={(val) => handleChange('packer_address', val)}
+                    options={STANDARD_MANUFACTURER_ADDRESSES}
+                    placeholder="e.g. Prasanta Apartment, Check Post"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Packer Pincode</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 700125"
-                      value={formData.packer_pincode}
-                      onChange={(e) => handleChange('packer_pincode', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <EditableDropdown
+                    label="Packer Pincode"
+                    value={formData.packer_pincode}
+                    onChange={(val) => handleChange('packer_pincode', val)}
+                    options={STANDARD_PINCODES}
+                    placeholder="e.g. 700125"
+                  />
                 </div>
               </div>
             </div>
@@ -1629,100 +1904,61 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
 
           {/* TAB 4: PHOTOS & MARKETPLACE DESCRIPTION */}
           {activeTab === 'photos' && (
-            <div className="space-y-5 animate-fade-in">
+            <div className="space-y-5 animate-fade-in pb-12">
               <div>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-                  Garment Photography (Image 1 Front View)
+                  Garment Photography (Images 1, 2, 3, 4 with Direct Uploads)
                 </h3>
-                <div className="p-4 border border-slate-800 rounded-xl bg-slate-950/60 flex flex-col sm:flex-row items-center gap-4">
-                  <div className="relative w-28 h-36 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
-                    {imagePreview ? (
-                      <img
-                        src={imagePreview}
-                        alt="Front Preview"
-                        className="w-full h-full object-cover object-top"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-slate-600 gap-1">
-                        <ImageIcon className="w-6 h-6" />
-                        <span className="text-[10px]">No Photo</span>
-                      </div>
-                    )}
-                  </div>
+                <p className="text-[11px] text-slate-400 mb-3">
+                  Upload photos directly from your computer or enter local Windows folders (e.g.{' '}
+                  <span className="font-mono text-emerald-300">D:\Business Website\Pic\DE26011\Blue\Blue_1.jpg</span>) — paths are automatically normalized!
+                </p>
 
-                  <div className="flex-1 space-y-2.5 w-full">
-                    <div className="flex items-center gap-3">
-                      <label className="btn-secondary text-xs flex items-center gap-1.5 cursor-pointer">
-                        <Upload className="w-4 h-4 text-emerald-400" />
-                        <span>{uploadingImage ? 'Uploading & Optimizing...' : 'Upload Image from Computer'}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageFileSelect}
-                          disabled={uploadingImage}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
+                <div className="space-y-3">
+                  <PhotoUploadCard
+                    title="Image 1: Primary Catalog Front View (Main)"
+                    sublabel="Required for marketplace catalog thumbnail & main search listing"
+                    fieldKey="image_url"
+                    value={formData.image_url}
+                    preview={imagePreviews.image_url}
+                    onChange={handleChange}
+                    onUpload={handleImageFileSelect}
+                    isUploading={uploadingImage.image_url}
+                  />
 
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
-                        Image 1 URL / Folder Path
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. /Pic/DE26085/Black/Black_1.png"
-                        value={formData.image_url || ''}
-                        onChange={(e) => {
-                          handleChange('image_url', e.target.value);
-                          setImagePreview(e.target.value);
-                        }}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  <PhotoUploadCard
+                    title="Image 2: Back / Full-Length Perspective"
+                    sublabel="Displays back neck styling, silhouette and garment drape"
+                    fieldKey="image_url_2"
+                    value={formData.image_url_2}
+                    preview={imagePreviews.image_url_2}
+                    onChange={handleChange}
+                    onUpload={handleImageFileSelect}
+                    isUploading={uploadingImage.image_url_2}
+                  />
 
-              {/* Additional Photos */}
-              <div>
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Additional Catalog Views (Images 2, 3, 4)
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Image 2 (Back / Detail)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. /Pic/.../Black_2.png"
-                      value={formData.image_url_2 || ''}
-                      onChange={(e) => handleChange('image_url_2', e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <PhotoUploadCard
+                    title="Image 3: Fabric Texture & Detail View"
+                    sublabel="Close-up of weave pattern, print quality and surface embellishment"
+                    fieldKey="image_url_3"
+                    value={formData.image_url_3}
+                    preview={imagePreviews.image_url_3}
+                    onChange={handleChange}
+                    onUpload={handleImageFileSelect}
+                    isUploading={uploadingImage.image_url_3}
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Image 3 (Fabric Texture)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. /Pic/.../Black_3.jpg"
-                      value={formData.image_url_3 || ''}
-                      onChange={(e) => handleChange('image_url_3', e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-400 mb-1">Image 4 (Folded / Package)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. /Pic/.../Black_4.jpg"
-                      value={formData.image_url_4 || ''}
-                      onChange={(e) => handleChange('image_url_4', e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <PhotoUploadCard
+                    title="Image 4: Folded / Packaging View"
+                    sublabel="Folded garment showing branding, polybag tag or package appearance"
+                    fieldKey="image_url_4"
+                    value={formData.image_url_4}
+                    preview={imagePreviews.image_url_4}
+                    onChange={handleChange}
+                    onUpload={handleImageFileSelect}
+                    isUploading={uploadingImage.image_url_4}
+                  />
                 </div>
               </div>
 
@@ -1771,7 +2007,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || uploadingImage}
+                disabled={isSubmitting || Object.values(uploadingImage).some(Boolean)}
                 className="px-5 py-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold shadow-lg shadow-emerald-900/30 flex items-center gap-2"
               >
                 {isSubmitting ? (

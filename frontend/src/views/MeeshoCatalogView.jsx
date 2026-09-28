@@ -43,7 +43,7 @@ const MEESHO_CATALOG_COLUMNS = [
   { key: 'gst_pct', label: 'GST %', sortable: true, filterable: true, numeric: true, getValue: (p) => p.gst_pct !== null && p.gst_pct !== undefined ? `${p.gst_pct}%` : '5%' },
   { key: 'hsn_id', label: 'HSN ID', sortable: true, filterable: true, getValue: (p) => p.hsn_id || '620821' },
   { key: 'net_weight_gms', label: 'Net Weight', sortable: true, filterable: true, numeric: true, getValue: (p) => p.net_weight_gms || 285 },
-  { key: 'inventory', label: 'Inventory', sortable: true, filterable: true, numeric: true, getValue: (p) => p.inventory || p.stock_on_hand || 10 },
+  { key: 'inventory', label: 'Inventory', sortable: true, filterable: true, numeric: true, getValue: (p) => p.inventory ?? p.stock_on_hand ?? 10 },
   { key: 'colour', label: 'Color', sortable: true, filterable: true },
   { key: 'country_of_origin', label: 'Country of Origin', sortable: true, filterable: true, getValue: (p) => p.country_of_origin || 'India' },
   { key: 'manufacturer_name', label: 'Manufacturer', sortable: true, filterable: true, getValue: (p) => p.manufacturer_name || 'Pegasus Creation' },
@@ -766,7 +766,7 @@ export default function MeeshoCatalogView() {
                     {/* 11. Inventory */}
                     <td className="py-2.5 px-3 text-center">
                       <span className="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                        {p.inventory || p.stock_on_hand || 10}
+                        {p.inventory ?? p.stock_on_hand ?? 10}
                       </span>
                     </td>
 
