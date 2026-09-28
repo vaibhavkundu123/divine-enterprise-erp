@@ -441,11 +441,12 @@ def create_catalog_product(payload: ProductCreateSchema, db: Session = Depends(g
     pr = payload.purchase_rate
     m_price = payload.meesho_price
     if not m_price or m_price <= 0:
-        # Exact Excel formula: =ROUND($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2)+(($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2))*0.05),0)
-        t1 = pr + 10.0 + (pr * 0.20)
-        t2 = t1 + (t1 * margin)
-        t3 = t2 * 1.05
-        m_price = float(math.floor(t3 + 0.5))
+        # Standardized Meesho formula: =ROUND(($O2+($O2*$P2))*1.05*1.20, 0)
+        # Cost + Profit, with 5% GST and 20% Meesho Return/RTO allowance
+        cost_plus_profit = pr + (pr * margin)
+        with_gst = cost_plus_profit * 1.05
+        total = with_gst * 1.20
+        m_price = float(round(total))
 
     w_price = payload.wrong_return_price
     if w_price is None or w_price <= 0:

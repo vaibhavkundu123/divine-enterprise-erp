@@ -19,68 +19,337 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-const STANDARD_COLORS = [
-  'Black',
-  'Maroon',
-  'Red',
-  'Navy Blue',
-  'Peach',
-  'Green',
-  'Purple',
-  'Yellow',
-  'Gold',
-  'Pink',
-  'White',
-  'Brown',
-  'Blue',
-  'Orange',
-  'Grey',
-  'Coral',
-  'Lavendar',
-  'Aqua Blue',
-  'Nude',
-  'Lemon',
-  'Baby Pink',
-  'Charcoal',
-  'Brick Red',
-  'Sea Green',
-  'Sky BLUE',
-  'Mustard',
-  'KHAKI',
-  'Melange',
-  'Turk',
-  'Gray',
-  'Fawn',
-  'Light Brown',
-  'Rani',
-  'Termy Green',
-  'Multi Colour',
-  'Tremy Pink',
-  'Rest Red',
-  'Rest Pink',
-  'Floris Pink',
-  'Floris Green',
-  'Rest Peach',
-  'Rest Navy',
-  'Boots Lemon',
+export const STANDARD_COLORS = [
+  'Black', 'Maroon', 'Red', 'Navy Blue', 'Peach', 'Green', 'Purple', 'Yellow', 'Gold',
+  'Pink', 'White', 'Brown', 'Blue', 'Orange', 'Grey', 'Coral', 'Lavendar', 'Aqua Blue',
+  'Nude', 'Lemon', 'Baby Pink', 'Charcoal', 'Brick Red', 'Sea Green', 'Sky BLUE',
+  'Mustard', 'KHAKI', 'Melange', 'Turk', 'Gray', 'Fawn', 'Light Brown', 'Rani',
+  'Termy Green', 'Multi Colour', 'Tremy Pink', 'Rest Red', 'Rest Pink', 'Floris Pink',
+  'Floris Green', 'Rest Peach', 'Rest Navy', 'Boots Lemon', 'Beige', 'Cream', 'Dark Multicolour',
+  'Grey Melange', 'Lemon Yellow', 'Light Multicolour', 'Metallic', 'Mint Green', 'Multicolor',
+  'Olive', 'Rust', 'Silver', 'Teal',
 ];
 
-const STANDARD_SIZES = [
-  'XXL',
-  'XL',
-  'L',
-  'M',
-  'Free Size',
-  '0 - 3 Months',
-  '3 - 6 Months',
-  '6 - 9 Months',
-  '9 - 12 Months',
-  '12 - 18 Months',
-  '18 - 24 Months',
-  '24 - 36 Months',
+export const STANDARD_SIZES = [
+  'XXL', 'XL', 'L', 'M', 'S', 'XS', 'Free Size', '3XL', '4XL', '5XL',
+  '0 - 3 Months', '3 - 6 Months', '6 - 9 Months', '9 - 12 Months',
+  '12 - 18 Months', '18 - 24 Months', '24 - 36 Months',
 ];
-const STANDARD_CATEGORIES = ['Nighty', 'Housecoat', 'INFANT', 'TODDLER', 'GIRLS', 'BOYS'];
-const STANDARD_NECKS = ['Square Neck', 'Round Neck', 'V-Neck', 'Collar Neck', 'U-Neck'];
+
+export const STANDARD_CATEGORIES = ['Nighty', 'Housecoat', 'INFANT', 'TODDLER', 'GIRLS', 'BOYS'];
+
+export const STANDARD_SUB_CATEGORIES = [
+  'Sleeveless',
+  'Short Sleeves',
+  '3/4th Sleeves',
+  'Three-Quarter Sleeves',
+  'Full Sleeves',
+  'Long Sleeves',
+  'Cap Sleeves',
+  'Half Sleeves',
+  'Shoulder Strap',
+];
+
+export const STANDARD_NECKS = [
+  'Square Neck',
+  'Round Neck',
+  'V-Neck',
+  'Collar Neck',
+  'U-Neck',
+  'Boat Neck',
+  'Sweetheart Neck',
+  'Halter Neck',
+  'Keyhole Neck',
+  'Mandarin',
+  'Scoop Neck',
+  'Shirt Collar',
+  'Shoulder Straps',
+  'Notch',
+  'Paan',
+  'Surplice',
+  'Stylised',
+];
+
+export const STANDARD_SUB_PRODUCTS = [
+  'SINGLE DRESS',
+  'SET OF 2',
+  'SET OF 3',
+  'NIGHTY WITH ROBE',
+];
+
+export const STANDARD_FABRICS = [
+  'Cotton',
+  'Cotton Blend',
+  'Rayon',
+  'Hosiery',
+  'Satin',
+  'Crepe',
+  'Chiffon',
+  'Georgette',
+  'Fleece',
+  'Linen',
+  'Micromodal',
+  'Modal',
+  'Net',
+  'Nylon',
+  'Polycotton',
+  'Polyester',
+  'Silk',
+  'Silk Blend',
+  'Velvet',
+  'Viscose',
+  'Viscose Rayon',
+  'Wool',
+  'Cotswool',
+  'Cotton Linen',
+  'Denim',
+  'Khadi Cotton',
+  'Acrylic',
+];
+
+export const STANDARD_FABRIC_COMPOSITIONS = [
+  'Woven',
+  'Knitted',
+  '100% Cotton',
+  'Cotton Blend',
+  'Rayon',
+  'Hosiery',
+  'Satin',
+  'Polyester',
+  'Silk',
+];
+
+export const STANDARD_FABRIC_TYPES = ['Woven', 'Knitted'];
+
+export const STANDARD_FIT_TYPES = [
+  'Dress',
+  'Frock',
+  'Gown',
+  'Jumpsuit',
+  'Kaftan',
+  'Robe',
+  'Short Nighty',
+  'T-Shirt Dress',
+  'Regular Fit',
+  'Relaxed Fit',
+  'A-Line',
+];
+
+export const STANDARD_GENERIC_NAMES = [
+  'Maxi',
+  'Nighty',
+  'Night Gown',
+  'Nightdress',
+  'Sleepwear Gown',
+  'Garment',
+  'Bottom Wear',
+  'Topwear',
+  'Undergarment',
+  'Accessories',
+  'Sportswear',
+  'Others',
+];
+
+export const STANDARD_PATTERNS = [
+  'Printed',
+  'Solid',
+  'Self-Design',
+  'Striped',
+  'Checked',
+  'Colorblocked',
+  'Dyed/ Washed',
+  'Embellished',
+  'Embroidered',
+  'Lace',
+];
+
+export const STANDARD_PRINT_TYPES = [
+  'Botanical',
+  'Floral',
+  'Ethnic Motif',
+  'Abstract',
+  'Geometric',
+  'Polka Dots',
+  'Solid',
+  'Stripe',
+  'Animal',
+  'Camoflague',
+  'Checked',
+  'Chevron',
+  'Colorblocked',
+  'Embellished',
+  'Fruits',
+  'Heart',
+  'Korean',
+  'Leheriya',
+  'Melange',
+  'Micro Print',
+  'Ombre',
+  'Placement Print',
+  'Quirky',
+  'Tie And Dye',
+  'Tribal',
+  'Typography',
+  'Woven Design',
+];
+
+export const STANDARD_SLEEVE_LENGTHS = [
+  'Sleeveless',
+  'Short Sleeves',
+  'Three-Quarter Sleeves',
+  'Long Sleeves',
+  'Shoulder Strap',
+];
+
+export const STANDARD_POCKETS = [
+  'No Pocket',
+  '1',
+  '2',
+  '3',
+  '4',
+  '1 Side Pocket',
+  '2 Side Pockets',
+];
+
+export const STANDARD_OCCASIONS = [
+  'Everyday',
+  'Bridal',
+  'Casual',
+  'Nightwear',
+  'Lounge Wear',
+];
+
+export const STANDARD_SURFACE_STYLINGS = [
+  'Pleated Or Gathered',
+  'Bow',
+  'Contrast Piping',
+  'Lace Inserts',
+  'Lace Trim',
+  'Ruffles',
+  'Cutwork',
+  'Applique',
+  'Cut Out',
+  'Embellished',
+  'Embroidery',
+  'Fringed',
+  'Layered',
+  'Sequinned',
+  'Smocking Or Shirred',
+  'Studded',
+  'Tassels Or Pom-Poms',
+  'Tie-Ups',
+  'Waist Tie-Ups',
+  'Not Applicable',
+];
+
+export const STANDARD_LENGTHS = [
+  'Maxi',
+  'Calf-Length',
+  'Knee Length',
+  'Above Knee',
+  'Ankle Length',
+];
+
+export const STANDARD_COUNTRIES = [
+  'India',
+  'Bangladesh',
+  'China',
+  'Sri Lanka',
+  'Vietnam',
+  'Other',
+];
+
+export const STANDARD_SEASONS = [
+  'Everyday',
+  'Summer',
+  'Winter',
+  'Spring',
+  'Autumn',
+  'Festive',
+];
+
+export const STANDARD_ADD_ONS = [
+  'No Add Ons',
+  'Robe',
+  'Bra',
+  'Briefs',
+  'Bra And Briefs',
+  'Robe And Briefs',
+  'Robe Bra And Briefs',
+  'Top',
+  'Set',
+  'Padded',
+];
+
+export const STANDARD_NET_QUANTITIES = ['1', '2', '3', '4', '5'];
+export const STANDARD_COMPONENTS = ['1', '2', '3', '4', '5'];
+export const STANDARD_SIZES_PER_SET = ['1', '2', '3', '4', '5', '6'];
+export const STANDARD_GST_RATES = ['5', '12', '18', '0'];
+export const STANDARD_HSN_CODES = [
+  '620821',
+  '620891',
+  '620892',
+  '620899',
+  '610831',
+  '610832',
+  '610839',
+];
+
+export const STANDARD_BUST_SIZES = ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56'];
+export const STANDARD_LENGTH_SIZES = ['36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '55', '56', '58', '60'];
+export const STANDARD_HIP_SIZES = ['30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58', '60'];
+export const STANDARD_WAIST_SIZES = ['24', '26', '28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54'];
+
+/**
+ * Generic reusable select dropdown for all form fields that renders standard options
+ * and seamlessly preserves any custom or legacy values present in existing products.
+ */
+export function SelectDropdown({
+  label,
+  value,
+  onChange,
+  options = [],
+  required = false,
+  placeholder = '-- Select --',
+  disabled = false,
+  className = '',
+}) {
+  const strVal = value != null ? String(value) : '';
+  const hasCustom =
+    strVal !== '' && !options.some((opt) => String(opt).toLowerCase() === strVal.toLowerCase());
+
+  return (
+    <div>
+      {label && (
+        <label className="block text-xs font-medium text-slate-300 mb-1">
+          {label} {required && <span className="text-rose-400">*</span>}
+        </label>
+      )}
+      <select
+        value={strVal}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        disabled={disabled}
+        className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 cursor-pointer ${className}`}
+      >
+        <option value="">{placeholder}</option>
+        {hasCustom && (
+          <option value={strVal}>
+            {strVal} (Current / Custom)
+          </option>
+        )}
+        {options.map((opt) => {
+          const optStr = String(opt);
+          return (
+            <option key={optStr} value={optStr}>
+              {optStr}
+            </option>
+          );
+        })}
+      </select>
+    </div>
+  );
+}
 
 export const EMPTY_FORM_STATE = {
   style_no: '',
@@ -148,12 +417,19 @@ export const EMPTY_FORM_STATE = {
 };
 
 /**
- * Evaluates Meesho Price based on the exact Barcode Master Excel formula:
- * =ROUND($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2)+(($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2))*0.05),0)
+ * Evaluates Meesho Price based on the standardized Barcode Master / Meesho Catalog formula:
+ * =ROUND(($O2+($O2*$P2))*1.05*1.20, 0)
+ * =ROUND(($O2+($O2*$P2))*1.26, 0)
  *
  * where:
  *   $O2 = Purchase Rate (pr)
  *   $P2 = Profit Margin (marginDecimal)
+ *
+ * Step 1: Base Cost + Profit Margin = pr + (pr * marginDecimal)
+ * Step 2: Add 5% GST = Step 1 * 1.05
+ * Step 3: Add 20% Meesho Return/RTO Allowance = Step 2 * 1.20
+ * Result: ROUND(Step 3, 0)
+ * Wrong Return Price: Meesho Price - 22 (when Meesho Price > 22)
  */
 export function evaluatePricingFormula(prVal, marginVal) {
   const pr = parseFloat(prVal);
@@ -178,12 +454,12 @@ export function evaluatePricingFormula(prVal, marginVal) {
   const marginPercent = Math.round(marginDecimal * 100 * 10) / 10;
 
   // Formula exact terms:
-  // Term 1: $O2 + 10 + ($O2 * 0.2)
-  const t1 = pr + 10.0 + (pr * 0.20);
-  // Term 2: Term 1 + (Term 1 * $P2)
-  const t2 = t1 + (t1 * marginDecimal);
-  // Term 3: Term 2 + (Term 2 * 0.05)
-  const t3 = t2 + (t2 * 0.05);
+  // Term 1: Cost + Profit Margin = pr + (pr * marginDecimal)
+  const t1 = pr + (pr * marginDecimal);
+  // Term 2: With 5% GST = Term 1 * 1.05
+  const t2 = t1 * 1.05;
+  // Term 3: With 20% Meesho Return/RTO allowance = Term 2 * 1.20 (= pr * (1 + marginDecimal) * 1.26)
+  const t3 = t2 * 1.20;
   // Excel ROUND(Term 3, 0)
   const meeshoPrice = Math.round(t3);
   // Meesho Wrong Return formula: =IF(D{r}>22, D{r}-22, "")
@@ -677,89 +953,55 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Colour <span className="text-rose-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        list="color-options"
-                        required
-                        placeholder="e.g. Black"
-                        value={formData.colour}
-                        onChange={(e) => handleChange('colour', e.target.value)}
-                        className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                      />
-                      <datalist id="color-options">
-                        {STANDARD_COLORS.map((c) => (
-                          <option key={c} value={c} />
-                        ))}
-                      </datalist>
-                    </div>
-                  </div>
+                  <SelectDropdown
+                    label="Colour"
+                    value={formData.colour}
+                    onChange={(val) => handleChange('colour', val)}
+                    options={STANDARD_COLORS}
+                    required={true}
+                    placeholder="-- Select Colour --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Sizing / Variation <span className="text-rose-400">*</span>
-                    </label>
-                    <select
-                      value={formData.sizing}
-                      onChange={(e) => handleChange('sizing', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="">-- Select Size --</option>
-                      {STANDARD_SIZES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <SelectDropdown
+                    label="Sizing / Variation"
+                    value={formData.sizing}
+                    onChange={(val) => handleChange('sizing', val)}
+                    options={STANDARD_SIZES}
+                    required={true}
+                    placeholder="-- Select Size --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Category</label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => handleChange('category', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="">-- Select Category --</option>
-                      {STANDARD_CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <SelectDropdown
+                    label="Category"
+                    value={formData.category}
+                    onChange={(val) => handleChange('category', val)}
+                    options={STANDARD_CATEGORIES}
+                    placeholder="-- Select Category --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Sub Category</label>
-                    <input
-                      type="text"
-                      value={formData.sub_category}
-                      onChange={(e) => handleChange('sub_category', e.target.value)}
-                      placeholder="e.g. Sleeveless"
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Sub Category"
+                    value={formData.sub_category}
+                    onChange={(val) => handleChange('sub_category', val)}
+                    options={STANDARD_SUB_CATEGORIES}
+                    placeholder="-- Select Sub Category --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Neck / Product Type</label>
-                    <input
-                      type="text"
-                      list="neck-options"
-                      value={formData.product_type}
-                      onChange={(e) => handleChange('product_type', e.target.value)}
-                      placeholder="e.g. Square Neck"
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                    <datalist id="neck-options">
-                      {STANDARD_NECKS.map((n) => (
-                        <option key={n} value={n} />
-                      ))}
-                    </datalist>
-                  </div>
+                  <SelectDropdown
+                    label="Neck / Product Type"
+                    value={formData.product_type}
+                    onChange={(val) => handleChange('product_type', val)}
+                    options={STANDARD_NECKS}
+                    placeholder="-- Select Neck / Type --"
+                  />
+
+                  <SelectDropdown
+                    label="Sub Product"
+                    value={formData.sub_product}
+                    onChange={(val) => handleChange('sub_product', val)}
+                    options={STANDARD_SUB_PRODUCTS}
+                    placeholder="-- Select Sub Product --"
+                  />
                 </div>
               </div>
 
@@ -848,28 +1090,21 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">GST Rate (%)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="e.g. 5"
-                      value={formData.gst_pct}
-                      onChange={(e) => handleChange('gst_pct', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="GST Rate (%)"
+                    value={formData.gst_pct}
+                    onChange={(val) => handleChange('gst_pct', val)}
+                    options={STANDARD_GST_RATES}
+                    placeholder="-- Select GST % --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">HSN ID</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 620821"
-                      value={formData.hsn_id}
-                      onChange={(e) => handleChange('hsn_id', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="HSN ID"
+                    value={formData.hsn_id}
+                    onChange={(val) => handleChange('hsn_id', val)}
+                    options={STANDARD_HSN_CODES}
+                    placeholder="-- Select HSN ID --"
+                  />
                 </div>
 
                 {/* Live Formula Computation Engine Card */}
@@ -889,7 +1124,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                   </div>
 
                   <div className="text-[11px] font-mono bg-slate-950/90 p-2.5 rounded-lg border border-slate-800 text-emerald-300 overflow-x-auto whitespace-pre">
-                    =ROUND($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2)+(($O2+10+($O2*0.2)+(($O2+10+($O2*0.2))*$P2))*0.05),0)
+                    =ROUND(($O2+($O2*$P2))*1.05*1.20, 0)
                   </div>
 
                   {(() => {
@@ -906,19 +1141,19 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                       <div className="space-y-2 pt-1">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                           <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                            <div className="text-[10px] text-slate-400 uppercase font-medium">1. Base + Buffer (T1)</div>
+                            <div className="text-[10px] text-slate-400 uppercase font-medium">1. Cost + Profit (T1)</div>
                             <div className="font-mono text-white font-bold text-sm">₹{calc.t1}</div>
-                            <div className="text-[9px] text-slate-400 font-mono">₹{calc.pr} + ₹10 + 20%</div>
+                            <div className="text-[9px] text-slate-400 font-mono">₹{calc.pr} + {calc.marginPercent}% Margin</div>
                           </div>
                           <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                            <div className="text-[10px] text-slate-400 uppercase font-medium">2. With Profit (T2)</div>
+                            <div className="text-[10px] text-slate-400 uppercase font-medium">2. With 5% GST (T2)</div>
                             <div className="font-mono text-white font-bold text-sm">₹{calc.t2}</div>
-                            <div className="text-[9px] text-slate-400 font-mono">+{calc.marginPercent}% Profit Margin</div>
+                            <div className="text-[9px] text-slate-400 font-mono">+5% Statutory Tax</div>
                           </div>
                           <div className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
-                            <div className="text-[10px] text-slate-400 uppercase font-medium">3. With 5% GST (T3)</div>
-                            <div className="font-mono text-emerald-400 font-bold text-sm">₹{calc.t3}</div>
-                            <div className="text-[9px] text-slate-400 font-mono">+5% Statutory Tax</div>
+                            <div className="text-[10px] text-slate-400 uppercase font-medium">3. With 20% Return (T3)</div>
+                            <div className="font-mono text-white font-bold text-sm">₹{calc.t3}</div>
+                            <div className="text-[9px] text-slate-400 font-mono">+20% Meesho Return/RTO</div>
                           </div>
                           <div className="bg-emerald-950/40 p-2.5 rounded-lg border border-emerald-500/40">
                             <div className="text-[10px] text-emerald-400 uppercase font-bold">Meesho Price</div>
@@ -1095,49 +1330,37 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                   Garment Fit & Detailed Body Measurements (Inches)
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Bust Size (in)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 42"
-                      value={formData.bust_size}
-                      onChange={(e) => handleChange('bust_size', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Bust Size (in)"
+                    value={formData.bust_size}
+                    onChange={(val) => handleChange('bust_size', val)}
+                    options={STANDARD_BUST_SIZES}
+                    placeholder="-- Select Bust --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Length Size (in)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 54"
-                      value={formData.length_size}
-                      onChange={(e) => handleChange('length_size', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Length Size (in)"
+                    value={formData.length_size}
+                    onChange={(val) => handleChange('length_size', val)}
+                    options={STANDARD_LENGTH_SIZES}
+                    placeholder="-- Select Length --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Hip Size (in)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 44"
-                      value={formData.hip_size}
-                      onChange={(e) => handleChange('hip_size', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Hip Size (in)"
+                    value={formData.hip_size}
+                    onChange={(val) => handleChange('hip_size', val)}
+                    options={STANDARD_HIP_SIZES}
+                    placeholder="-- Select Hip --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Waist Size (in)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 36"
-                      value={formData.waist_size}
-                      onChange={(e) => handleChange('waist_size', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Waist Size (in)"
+                    value={formData.waist_size}
+                    onChange={(val) => handleChange('waist_size', val)}
+                    options={STANDARD_WAIST_SIZES}
+                    placeholder="-- Select Waist --"
+                  />
                 </div>
               </div>
 
@@ -1147,137 +1370,101 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                   Fabric Composition & Style Specifications
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Fabric (Meesho Field)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Cotton"
-                      value={formData.fabric}
-                      onChange={(e) => handleChange('fabric', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Fabric (Meesho Field)"
+                    value={formData.fabric}
+                    onChange={(val) => handleChange('fabric', val)}
+                    options={STANDARD_FABRICS}
+                    placeholder="-- Select Fabric --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Fabric Composition (Barcode)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Woven"
-                      value={formData.fabric_composition}
-                      onChange={(e) => handleChange('fabric_composition', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Fabric Composition (Barcode)"
+                    value={formData.fabric_composition}
+                    onChange={(val) => handleChange('fabric_composition', val)}
+                    options={STANDARD_FABRIC_COMPOSITIONS}
+                    placeholder="-- Select Composition --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Fabric Type</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Woven"
-                      value={formData.fabric_type}
-                      onChange={(e) => handleChange('fabric_type', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Fabric Type"
+                    value={formData.fabric_type}
+                    onChange={(val) => handleChange('fabric_type', val)}
+                    options={STANDARD_FABRIC_TYPES}
+                    placeholder="-- Select Fabric Type --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Fit / Type</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Dress"
-                      value={formData.fit_type}
-                      onChange={(e) => handleChange('fit_type', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Fit / Type"
+                    value={formData.fit_type}
+                    onChange={(val) => handleChange('fit_type', val)}
+                    options={STANDARD_FIT_TYPES}
+                    placeholder="-- Select Fit / Type --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Generic Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Maxi"
-                      value={formData.generic_name}
-                      onChange={(e) => handleChange('generic_name', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Generic Name"
+                    value={formData.generic_name}
+                    onChange={(val) => handleChange('generic_name', val)}
+                    options={STANDARD_GENERIC_NAMES}
+                    placeholder="-- Select Generic Name --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Pattern</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Printed"
-                      value={formData.pattern}
-                      onChange={(e) => handleChange('pattern', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Pattern"
+                    value={formData.pattern}
+                    onChange={(val) => handleChange('pattern', val)}
+                    options={STANDARD_PATTERNS}
+                    placeholder="-- Select Pattern --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Print or Pattern Type</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Botanical"
-                      value={formData.print_type}
-                      onChange={(e) => handleChange('print_type', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Print or Pattern Type"
+                    value={formData.print_type}
+                    onChange={(val) => handleChange('print_type', val)}
+                    options={STANDARD_PRINT_TYPES}
+                    placeholder="-- Select Print Type --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Sleeve Length</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Sleeveless"
-                      value={formData.sleeve_length}
-                      onChange={(e) => handleChange('sleeve_length', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Sleeve Length"
+                    value={formData.sleeve_length}
+                    onChange={(val) => handleChange('sleeve_length', val)}
+                    options={STANDARD_SLEEVE_LENGTHS}
+                    placeholder="-- Select Sleeve Length --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Pockets</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. No Pocket"
-                      value={formData.pockets}
-                      onChange={(e) => handleChange('pockets', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Pockets"
+                    value={formData.pockets}
+                    onChange={(val) => handleChange('pockets', val)}
+                    options={STANDARD_POCKETS}
+                    placeholder="-- Select Pockets --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Occasion</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Everyday"
-                      value={formData.occasion}
-                      onChange={(e) => handleChange('occasion', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Occasion"
+                    value={formData.occasion}
+                    onChange={(val) => handleChange('occasion', val)}
+                    options={STANDARD_OCCASIONS}
+                    placeholder="-- Select Occasion --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Surface Styling</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Pleated Or Gathered"
-                      value={formData.surface_styling}
-                      onChange={(e) => handleChange('surface_styling', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Surface Styling"
+                    value={formData.surface_styling}
+                    onChange={(val) => handleChange('surface_styling', val)}
+                    options={STANDARD_SURFACE_STYLINGS}
+                    placeholder="-- Select Surface Styling --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Garment Length</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Maxi"
-                      value={formData.length}
-                      onChange={(e) => handleChange('length', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Garment Length"
+                    value={formData.length}
+                    onChange={(val) => handleChange('length', val)}
+                    options={STANDARD_LENGTHS}
+                    placeholder="-- Select Garment Length --"
+                  />
                 </div>
               </div>
             </div>
@@ -1314,71 +1501,53 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Country of Origin</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. India"
-                      value={formData.country_of_origin}
-                      onChange={(e) => handleChange('country_of_origin', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Country of Origin"
+                    value={formData.country_of_origin}
+                    onChange={(val) => handleChange('country_of_origin', val)}
+                    options={STANDARD_COUNTRIES}
+                    placeholder="-- Select Country --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Season</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Everyday"
-                      value={formData.season}
-                      onChange={(e) => handleChange('season', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Season"
+                    value={formData.season}
+                    onChange={(val) => handleChange('season', val)}
+                    options={STANDARD_SEASONS}
+                    placeholder="-- Select Season --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Components</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 1"
-                      value={formData.no_of_components}
-                      onChange={(e) => handleChange('no_of_components', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Components"
+                    value={formData.no_of_components}
+                    onChange={(val) => handleChange('no_of_components', val)}
+                    options={STANDARD_COMPONENTS}
+                    placeholder="-- Select Components --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Sizes per Set</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 1"
-                      value={formData.num_size_per_set}
-                      onChange={(e) => handleChange('num_size_per_set', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Sizes per Set"
+                    value={formData.num_size_per_set}
+                    onChange={(val) => handleChange('num_size_per_set', val)}
+                    options={STANDARD_SIZES_PER_SET}
+                    placeholder="-- Select Sizes/Set --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Net Quantity (N)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 1"
-                      value={formData.net_quantity}
-                      onChange={(e) => handleChange('net_quantity', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Net Quantity (N)"
+                    value={formData.net_quantity}
+                    onChange={(val) => handleChange('net_quantity', val)}
+                    options={STANDARD_NET_QUANTITIES}
+                    placeholder="-- Select Net Qty --"
+                  />
 
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Add ons</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. No Add Ons"
-                      value={formData.add_ons}
-                      onChange={(e) => handleChange('add_ons', e.target.value)}
-                      className="w-full bg-slate-950/80 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
+                  <SelectDropdown
+                    label="Add ons"
+                    value={formData.add_ons}
+                    onChange={(val) => handleChange('add_ons', val)}
+                    options={STANDARD_ADD_ONS}
+                    placeholder="-- Select Add Ons --"
+                  />
                 </div>
               </div>
 
