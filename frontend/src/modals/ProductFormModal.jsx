@@ -378,6 +378,7 @@ export function EditableDropdown({
   listId,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const strVal = value != null ? String(value) : '';
@@ -386,6 +387,7 @@ export function EditableDropdown({
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
+        setIsTyping(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -393,13 +395,16 @@ export function EditableDropdown({
   }, []);
 
   const filteredOptions = useMemo(() => {
-    if (!strVal) return options;
-    const lower = strVal.toLowerCase();
-    const matched = options.filter((opt) => String(opt).toLowerCase().includes(lower));
-    return matched;
-  }, [options, strVal]);
+    if (!isTyping || !strVal) return options;
+    const lower = strVal.toLowerCase().trim();
+    return options.filter((opt) => String(opt).toLowerCase().includes(lower));
+  }, [options, strVal, isTyping]);
 
-  const uniqueListId = listId || (label ? `list-${label.replace(/[^a-zA-Z0-9]/g, '_')}` : undefined);
+  const handleSelectOption = (opt) => {
+    onChange(String(opt));
+    setIsTyping(false);
+    setIsOpen(false);
+  };
 
   return (
     <div ref={containerRef} className="relative">
@@ -414,42 +419,60 @@ export function EditableDropdown({
           type={type}
           value={strVal}
           onChange={(e) => {
+            setIsTyping(true);
             onChange(e.target.value);
             if (!isOpen) setIsOpen(true);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsTyping(false);
+            setIsOpen(true);
+          }}
+          onClick={() => {
+            if (!isOpen) {
+              setIsTyping(false);
+              setIsOpen(true);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setIsOpen(false);
+              setIsTyping(false);
+            } else if (e.key === 'ArrowDown' && !isOpen) {
+              setIsOpen(true);
+              setIsTyping(false);
+            }
+          }}
           required={required}
           disabled={disabled}
           placeholder={placeholder || (label ? `Type or select ${label}...` : 'Type or select...')}
-          list={uniqueListId}
           autoComplete="off"
-          className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-3 pr-8 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 ${className}`}
+          className={`w-full bg-slate-950/80 border border-slate-700/80 rounded-lg pl-3 pr-8 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-60 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`}
         />
         <button
           type="button"
           tabIndex={-1}
           disabled={disabled}
-          onClick={() => {
-            setIsOpen((prev) => !prev);
-            if (!isOpen) inputRef.current?.focus();
+          onMouseDown={(e) => {
+            e.preventDefault();
           }}
-          className="absolute right-2 p-1 text-slate-400 hover:text-slate-200 focus:outline-none"
+          onClick={() => {
+            setIsOpen((prev) => {
+              const next = !prev;
+              if (next) setIsTyping(false);
+              return next;
+            });
+            inputRef.current?.focus();
+          }}
+          className="absolute right-1.5 p-1 text-slate-400 hover:text-slate-200 focus:outline-none transition-colors"
+          aria-label={`Toggle ${label || 'options'} dropdown`}
         >
           <ChevronDown
-            className={`w-3.5 h-3.5 transition-transform duration-150 ${
+            className={`w-4 h-4 transition-transform duration-150 ${
               isOpen ? 'rotate-180 text-emerald-400' : ''
             }`}
           />
         </button>
       </div>
-
-      {uniqueListId && (
-        <datalist id={uniqueListId}>
-          {options.map((opt) => (
-            <option key={String(opt)} value={String(opt)} />
-          ))}
-        </datalist>
-      )}
 
       {isOpen && options.length > 0 && !disabled && (
         <div className="absolute z-50 left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg bg-slate-900 border border-slate-700 shadow-2xl py-1 text-xs divide-y divide-slate-800/40">
@@ -462,8 +485,7 @@ export function EditableDropdown({
                   key={optStr}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    onChange(optStr);
-                    setIsOpen(false);
+                    handleSelectOption(optStr);
                   }}
                   className={`px-3 py-1.5 cursor-pointer flex items-center justify-between transition-colors ${
                     isSelected
@@ -472,7 +494,7 @@ export function EditableDropdown({
                   }`}
                 >
                   <span>{optStr}</span>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                  {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                 </div>
               );
             })
@@ -492,8 +514,7 @@ export function EditableDropdown({
                     key={optStr}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      onChange(optStr);
-                      setIsOpen(false);
+                      handleSelectOption(optStr);
                     }}
                     className="px-2 py-1 text-slate-300 hover:bg-slate-800 hover:text-white rounded cursor-pointer"
                   >
