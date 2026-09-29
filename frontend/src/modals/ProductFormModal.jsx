@@ -1383,6 +1383,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         await api.createProduct(payload);
       }
       onSuccess?.(payload);
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to save product details');

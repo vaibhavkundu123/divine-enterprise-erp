@@ -58,6 +58,7 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess }) {
       const res = await api.importExcelCatalog(file);
       setImportResult(res);
       onSuccess?.(res);
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
     } catch (err) {
       setError(err.message || 'Failed to import Excel file.');
     } finally {

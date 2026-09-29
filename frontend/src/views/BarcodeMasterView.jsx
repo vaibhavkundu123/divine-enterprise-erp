@@ -184,6 +184,7 @@ export default function BarcodeMasterView() {
     try {
       await api.deleteProduct(item.id);
       showToast(`Deleted SKU ${item.style_no} successfully.`);
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
       loadData();
     } catch (err) {
       alert(`Failed to delete SKU: ${err.message}`);
@@ -290,7 +291,7 @@ export default function BarcodeMasterView() {
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400">
-            Internal Master Engine: 41 Cotton Nighty SKUs, 14-char Barcode Generation, Sizing & Unit Economics.
+            Internal Master Engine: {stats?.total_skus ?? products.length} Cotton Nighty SKUs, 14-char Barcode Generation, Sizing & Unit Economics.
           </p>
         </div>
 

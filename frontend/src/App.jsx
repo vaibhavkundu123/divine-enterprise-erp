@@ -150,6 +150,15 @@ export default function App() {
     loadDashboardData();
   }, [horizon]);
 
+  // Re-fetch catalog when SKUs are created, updated, or deleted
+  useEffect(() => {
+    const handleCatalogUpdate = () => {
+      loadDashboardData();
+    };
+    window.addEventListener('divine-catalog-updated', handleCatalogUpdate);
+    return () => window.removeEventListener('divine-catalog-updated', handleCatalogUpdate);
+  }, []);
+
   const handleSync = async () => {
     setIsSyncing(true);
     try {
@@ -250,6 +259,7 @@ export default function App() {
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
         kpis={kpis}
+        catalogCount={styleCatalog?.length}
         onStartMasterTour={handleStartMasterTour}
         onStartTabTour={handleStartTabTour}
       />

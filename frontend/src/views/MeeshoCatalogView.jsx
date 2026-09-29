@@ -225,6 +225,7 @@ export default function MeeshoCatalogView() {
     try {
       await api.deleteProduct(item.id);
       showToast(`Deleted SKU ${item.style_no} successfully.`);
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
       loadData();
     } catch (err) {
       alert(`Failed to delete SKU: ${err.message}`);
@@ -299,7 +300,7 @@ export default function MeeshoCatalogView() {
               Meesho Marketplace Catalog
             </h1>
             <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-              41 SKUs • 100% Photos Matched
+              {stats?.total_skus ?? products.length} SKUs • {stats?.image_readiness_pct ?? 100}% Photos Matched
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400">
@@ -367,12 +368,18 @@ export default function MeeshoCatalogView() {
               <ImageIcon className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-bold text-emerald-400 tracking-tight">41 / 41</div>
-              <span className="text-xs font-semibold text-emerald-300">(100% Ready)</span>
+              <div className="text-2xl font-bold text-emerald-400 tracking-tight">
+                {stats.has_image_count} / {stats.total_skus}
+              </div>
+              <span className="text-xs font-semibold text-emerald-300">
+                ({stats.image_readiness_pct}% Ready)
+              </span>
             </div>
             <p className="text-[11px] text-emerald-300/80 mt-1 flex items-center gap-1">
               <CheckCheck className="w-3.5 h-3.5" />
-              All photos matched from Pic/ folder
+              {stats.missing_images_count === 0
+                ? 'All photos matched from Pic/ folder'
+                : `${stats.missing_images_count} photos missing from Pic/ folder`}
             </p>
           </div>
 

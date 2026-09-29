@@ -29,6 +29,7 @@ export default function Sidebar({
   mobileOpen,
   setMobileOpen,
   kpis,
+  catalogCount,
   onStartMasterTour,
   onStartTabTour,
 }) {
@@ -45,7 +46,13 @@ export default function Sidebar({
     {
       title: 'OPERATIONS & INVENTORY',
       items: [
-        { id: 'barcode_master', label: 'Barcode Master', icon: Barcode, badge: '41 SKUs', badgeColor: 'indigo' },
+        {
+          id: 'barcode_master',
+          label: 'Barcode Master',
+          icon: Barcode,
+          badge: `${catalogCount || 46} SKUs`,
+          badgeColor: 'indigo',
+        },
         { id: 'meesho_catalog', label: 'Meesho Catalog', icon: ShoppingBag, badge: 'Photos Ready', badgeColor: 'emerald' },
         { id: 'sales', label: 'Sales Ledger', icon: ShoppingCart },
 
