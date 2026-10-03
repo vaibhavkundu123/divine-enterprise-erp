@@ -2,7 +2,14 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models.entities import ProcurementBatch, SalesOrder, RTOPipeline, CustomerReturn, ItemExchange
+from backend.app.models.entities import (
+    ProcurementBatch,
+    SalesOrder,
+    RTOPipeline,
+    CustomerReturn,
+    ItemExchange,
+    ProductCatalog,
+)
 from backend.app.services.financial_engine import (
     calculate_usable_stock,
     calculate_stock_valuation,
@@ -82,19 +89,29 @@ def get_stock_inventory_matrix(
 
 @router.get("/styles")
 def get_style_catalog(db: Session = Depends(get_db)):
-    """Provides autocomplete style metadata for sales intake"""
+    """Provides autocomplete style metadata for sales intake (Procurement + Catalog + Sales)"""
     proc_batches = db.query(ProcurementBatch).all()
     sales = db.query(SalesOrder).all()
     rtos = db.query(RTOPipeline).all()
     returns = db.query(CustomerReturn).all()
     exchanges = db.query(ItemExchange).all()
+    products = db.query(ProductCatalog).all()
+
+    prod_map = {p.style_no.strip(): p for p in products if p.style_no and p.style_no.strip()}
 
     wac_map = get_style_wac_map(db)
-    all_styles = sorted(list({p.style_no.strip() for p in proc_batches} | {s.style_no.strip() for s in sales}))
+    all_styles = sorted(list(
+        {p.style_no.strip() for p in proc_batches if p.style_no and p.style_no.strip()} |
+        {s.style_no.strip() for s in sales if s.style_no and s.style_no.strip()} |
+        set(prod_map.keys())
+    ))
 
     catalog = []
     for st in all_styles:
         tot_purchased = sum(p.inventory for p in proc_batches if p.style_no.strip() == st)
+        if tot_purchased == 0 and st in prod_map:
+            tot_purchased = prod_map[st].inventory or 0
+
         tot_sold = sum(s.quantity_sold for s in sales if s.style_no.strip() == st)
         
         rto_restocked = sum(r.quantity for r in rtos if r.style_no.strip() == st and r.status == "Restocked")
@@ -108,11 +125,17 @@ def get_style_catalog(db: Session = Depends(get_db)):
 
         soh = tot_purchased - tot_sold - unlinked_exch_out + rto_restocked + cr_restocked + exch_restocked
         unit_cost = wac_map.get(st, 0.0)
+        if (unit_cost == 0.0 or unit_cost is None) and st in prod_map and prod_map[st].purchase_rate:
+            unit_cost = float(prod_map[st].purchase_rate)
 
+        prod = prod_map.get(st)
         catalog.append({
             "style_no": st,
             "stock_on_hand": soh,
-            "unit_cost": unit_cost,
+            "unit_cost": round(unit_cost, 2),
+            "colour": prod.colour if prod else None,
+            "sizing": prod.sizing if prod else None,
+            "meesho_price": prod.meesho_price if prod else None,
             "suggested_price_25": round(unit_cost * 1.25, 2),
             "suggested_price_35": round(unit_cost * 1.35, 2),
             "suggested_price_50": round(unit_cost * 1.50, 2),

@@ -58,6 +58,7 @@ export default function ProcurementView() {
     if (!window.confirm('Delete this procurement batch?')) return;
     try {
       await api.deleteProcurement(id);
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
       loadData();
     } catch (err) {
       alert(err.message);
@@ -76,6 +77,7 @@ export default function ProcurementView() {
       setShowAddModal(false);
       setStyleNo('');
       setPurchaseRate('');
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
       loadData();
     } catch (err) {
       alert(err.message);
@@ -86,6 +88,7 @@ export default function ProcurementView() {
     try {
       await api.updateProcurement(id, updatedData);
       setEditingBatch(null);
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
       loadData();
     } catch (err) {
       alert(err.message);

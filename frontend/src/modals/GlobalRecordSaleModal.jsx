@@ -1,10 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ShoppingBag, DollarSign, Check, AlertCircle, Percent } from 'lucide-react';
+import { X, ShoppingBag, DollarSign, Check, AlertCircle, Percent, ChevronDown } from 'lucide-react';
 import { api } from '../services/api';
 import { formatCurrency, formatPercent } from '../utils/formatters';
 
 export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styleCatalog = [] }) {
+  const [internalCatalog, setInternalCatalog] = useState(styleCatalog || []);
+  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
+  const [isStyleTyping, setIsStyleTyping] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dropUp, setDropUp] = useState(false);
+
+  const styleContainerRef = useRef(null);
+  const styleInputRef = useRef(null);
+  const styleListRef = useRef(null);
+
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [styleNo, setStyleNo] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -16,8 +26,157 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Fetch fresh catalog whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      api.getStyleCatalog()
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setInternalCatalog(data);
+          }
+        })
+        .catch((err) => console.error('Failed to load style catalog:', err));
+    }
+  }, [isOpen]);
+
+  // Keep internal catalog in sync with prop updates
+  useEffect(() => {
+    if (styleCatalog && styleCatalog.length > 0) {
+      setInternalCatalog(styleCatalog);
+    }
+  }, [styleCatalog]);
+
+  // Listen to cross-system catalog updates (e.g. from procurement batch creation)
+  useEffect(() => {
+    const handleUpdate = () => {
+      api.getStyleCatalog()
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setInternalCatalog(data);
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener('divine-catalog-updated', handleUpdate);
+    return () => window.removeEventListener('divine-catalog-updated', handleUpdate);
+  }, []);
+
+  const effectiveCatalog = (internalCatalog && internalCatalog.length > 0) ? internalCatalog : styleCatalog;
+
   // Selected style metadata
-  const selectedStyle = styleCatalog.find((s) => s.style_no.toLowerCase() === styleNo.toLowerCase());
+  const selectedStyle = effectiveCatalog.find(
+    (s) => s.style_no && s.style_no.toLowerCase() === styleNo.trim().toLowerCase()
+  );
+
+  // Filtered styles based on user search query
+  const filteredStyles = useMemo(() => {
+    if (!isStyleTyping || !styleNo) return effectiveCatalog;
+    const lower = styleNo.toLowerCase().trim();
+    return effectiveCatalog.filter((s) =>
+      (s.style_no && s.style_no.toLowerCase().includes(lower)) ||
+      (s.colour && s.colour.toLowerCase().includes(lower)) ||
+      (s.sizing && s.sizing.toLowerCase().includes(lower))
+    );
+  }, [effectiveCatalog, styleNo, isStyleTyping]);
+
+  // Close style dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (styleContainerRef.current && !styleContainerRef.current.contains(e.target)) {
+        setIsStyleDropdownOpen(false);
+        setIsStyleTyping(false);
+        setHighlightedIndex(-1);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Dropup calculation
+  useEffect(() => {
+    if (isStyleDropdownOpen && styleContainerRef.current) {
+      const rect = styleContainerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setDropUp(spaceBelow < 280 && spaceAbove > 200);
+    }
+  }, [isStyleDropdownOpen]);
+
+  // Highlight index management
+  useEffect(() => {
+    if (isStyleDropdownOpen && filteredStyles.length > 0) {
+      const idx = filteredStyles.findIndex(
+        (s) => s.style_no && s.style_no.toLowerCase() === styleNo.trim().toLowerCase()
+      );
+      setHighlightedIndex(idx >= 0 ? idx : 0);
+    } else {
+      setHighlightedIndex(-1);
+    }
+  }, [isStyleDropdownOpen, isStyleTyping, filteredStyles, styleNo]);
+
+  // Auto-scroll highlighted option into view
+  useEffect(() => {
+    if (isStyleDropdownOpen && highlightedIndex >= 0 && styleListRef.current) {
+      const items = styleListRef.current.querySelectorAll('[data-style-item]');
+      if (items[highlightedIndex]) {
+        items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [highlightedIndex, isStyleDropdownOpen]);
+
+  const handleSelectStyle = (s) => {
+    setStyleNo(s.style_no);
+    setIsStyleDropdownOpen(false);
+    setIsStyleTyping(false);
+    setHighlightedIndex(-1);
+
+    // Auto-fill suggested selling price if not yet entered
+    if (!sellingPrice || parseFloat(sellingPrice) <= 0) {
+      const suggested = (s.meesho_price && s.meesho_price > 0)
+        ? s.meesho_price
+        : s.suggested_price_35 || (s.unit_cost ? Math.round(s.unit_cost * 1.35) : 0);
+      if (suggested > 0) {
+        setSellingPrice(suggested.toString());
+        const q = parseInt(quantity, 10) || 1;
+        setTotalRevenue((suggested * q).toFixed(2));
+      }
+    }
+  };
+
+  const handleStyleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setIsStyleDropdownOpen(false);
+      setIsStyleTyping(false);
+      setHighlightedIndex(-1);
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!isStyleDropdownOpen) {
+        setIsStyleDropdownOpen(true);
+        setIsStyleTyping(false);
+        setHighlightedIndex(0);
+      } else if (filteredStyles.length > 0) {
+        setHighlightedIndex((prev) => (prev + 1) % filteredStyles.length);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isStyleDropdownOpen) {
+        setIsStyleDropdownOpen(true);
+        setIsStyleTyping(false);
+        setHighlightedIndex(Math.max(0, filteredStyles.length - 1));
+      } else if (filteredStyles.length > 0) {
+        setHighlightedIndex((prev) => (prev - 1 + filteredStyles.length) % filteredStyles.length);
+      }
+    } else if (e.key === 'Enter') {
+      if (isStyleDropdownOpen) {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < filteredStyles.length) {
+          handleSelectStyle(filteredStyles[highlightedIndex]);
+        } else {
+          setIsStyleDropdownOpen(false);
+        }
+      }
+    }
+  };
 
   // Quick Markup handler
   const handleMarkup = (pct) => {
@@ -185,33 +344,163 @@ export default function GlobalRecordSaleModal({ isOpen, onClose, onSuccess, styl
           </div>
 
           {/* Style Autocomplete Selection */}
-          <div>
+          <div ref={styleContainerRef} className="relative">
             <div className="flex items-center justify-between mb-1">
-              <label htmlFor="sale-modal-style" className="block text-xs font-semibold text-slate-300">Style SKU</label>
+              <label htmlFor="sale-modal-style" className="block text-xs font-semibold text-slate-300">
+                Style SKU <span className="text-rose-400">*</span>
+              </label>
               {selectedStyle && (
                 <span className="text-[11px] text-slate-400">
-                  Stock: <strong className="text-white">{selectedStyle.stock_on_hand}</strong> units | WAC: {formatCurrency(selectedStyle.unit_cost)}
+                  Stock: <strong className={selectedStyle.stock_on_hand > 0 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>{selectedStyle.stock_on_hand}</strong> units | WAC: {formatCurrency(selectedStyle.unit_cost)}
+                  {selectedStyle.meesho_price ? ` | MRP: ₹${selectedStyle.meesho_price}` : ''}
                 </span>
               )}
             </div>
-            <input
-              id="sale-modal-style"
-              name="sale_style_no"
-              type="text"
-              list="style-options"
-              value={styleNo}
-              onChange={(e) => setStyleNo(e.target.value)}
-              placeholder="e.g. DE26001G"
-              required
-              className="input-field uppercase"
-            />
-            <datalist id="style-options">
-              {styleCatalog.map((s) => (
-                <option key={s.style_no} value={s.style_no}>
-                  {s.style_no} - Stock: {s.stock_on_hand} (WAC: {formatCurrency(s.unit_cost)})
-                </option>
-              ))}
-            </datalist>
+            
+            <div className="relative flex items-center">
+              <input
+                ref={styleInputRef}
+                id="sale-modal-style"
+                name="sale_style_no"
+                type="text"
+                value={styleNo}
+                onChange={(e) => {
+                  setStyleNo(e.target.value);
+                  setIsStyleTyping(true);
+                  if (!isStyleDropdownOpen) setIsStyleDropdownOpen(true);
+                }}
+                onFocus={() => {
+                  setIsStyleTyping(false);
+                  setIsStyleDropdownOpen(true);
+                }}
+                onClick={() => {
+                  if (!isStyleDropdownOpen) {
+                    setIsStyleTyping(false);
+                    setIsStyleDropdownOpen(true);
+                  }
+                }}
+                onKeyDown={handleStyleKeyDown}
+                placeholder="Type or select Style SKU (e.g. DE26010B)..."
+                required
+                autoComplete="off"
+                className="input-field uppercase pr-16 font-mono"
+              />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                {styleNo && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setStyleNo('');
+                      setIsStyleTyping(false);
+                      setIsStyleDropdownOpen(true);
+                      styleInputRef.current?.focus();
+                    }}
+                    className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title="Clear Style"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsStyleDropdownOpen((prev) => !prev);
+                    setIsStyleTyping(false);
+                    if (!isStyleDropdownOpen) styleInputRef.current?.focus();
+                  }}
+                  className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Toggle Style Catalog"
+                >
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isStyleDropdownOpen ? 'rotate-180 text-blue-400' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Interactive Dropdown Menu */}
+            {isStyleDropdownOpen && (
+              <div
+                ref={styleListRef}
+                className={`absolute left-0 right-0 z-50 ${
+                  dropUp ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                } bg-slate-900/98 backdrop-blur-md border border-slate-700/80 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-slate-800 animate-fade-in`}
+              >
+                <div className="p-2 bg-slate-950/80 sticky top-0 z-10 flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800">
+                  <span className="font-semibold text-slate-300">
+                    {filteredStyles.length} {filteredStyles.length === 1 ? 'Style' : 'Styles'} Available
+                  </span>
+                  <span className="text-[10px] text-slate-500">↑↓ keys to navigate, Enter to select</span>
+                </div>
+
+                {filteredStyles.length === 0 ? (
+                  <div className="p-3 text-center text-xs text-slate-400">
+                    No matching styles found for <span className="text-white font-mono">"{styleNo}"</span>.
+                    <p className="text-[11px] text-slate-500 mt-0.5">You can still enter and submit this SKU.</p>
+                  </div>
+                ) : (
+                  filteredStyles.map((s, idx) => {
+                    const isSelected = s.style_no?.toLowerCase() === styleNo?.trim().toLowerCase();
+                    const isHighlighted = idx === highlightedIndex;
+                    return (
+                      <div
+                        key={s.style_no}
+                        data-style-item
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectStyle(s);
+                        }}
+                        onClick={() => handleSelectStyle(s)}
+                        onMouseEnter={() => setHighlightedIndex(idx)}
+                        className={`p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors text-xs ${
+                          isSelected
+                            ? 'bg-blue-600/25 border-l-4 border-l-blue-500'
+                            : isHighlighted
+                            ? 'bg-slate-800/90 text-white'
+                            : 'hover:bg-slate-800/60 text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono font-bold text-white tracking-wide">{s.style_no}</span>
+                          {s.colour && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
+                              {s.colour}
+                            </span>
+                          )}
+                          {s.sizing && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700">
+                              {s.sizing}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                              s.stock_on_hand > 0
+                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            {s.stock_on_hand > 0 ? `${s.stock_on_hand} in stock` : '0 stock'}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            WAC: <span className="text-slate-200">{formatCurrency(s.unit_cost)}</span>
+                          </span>
+                          {s.meesho_price ? (
+                            <span className="text-[11px] text-blue-400 font-mono font-semibold">
+                              ₹{s.meesho_price}
+                            </span>
+                          ) : null}
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-400 shrink-0 ml-1" />}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
 
           {/* Quick Dynamic Price Markup Chips */}

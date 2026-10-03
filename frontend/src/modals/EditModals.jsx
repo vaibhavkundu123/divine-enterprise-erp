@@ -1246,6 +1246,7 @@ export function ProcurementEditModal({ batch, item, isOpen = true, onClose, onSu
         purchase_rate: rate,
       });
       onSuccess && onSuccess();
+      window.dispatchEvent(new CustomEvent('divine-catalog-updated'));
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to update procurement batch.');
