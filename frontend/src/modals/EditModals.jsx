@@ -1114,6 +1114,7 @@ export function ExchangeEditModal({ exchange, item, isOpen = true, onClose, onSu
               <option value="Color Preference">Color Preference</option>
               <option value="Style Change">Style Change</option>
               <option value="Fabric Quality Issue">Fabric Quality Issue</option>
+              <option value="Have other quality related issues">Have other quality related issues</option>
               <option value="Don't need the product anymore">Don't need the product anymore</option>
               <option value="Received wrong product (different color / size / product)">Received wrong product (different color / size / product)</option>
               <option value="Received defective product (stains / damaged / torn)">Received defective product (stains / damaged / torn)</option>

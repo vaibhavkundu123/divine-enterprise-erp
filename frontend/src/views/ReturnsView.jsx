@@ -258,7 +258,16 @@ export default function ReturnsView() {
               </div>
               <div><label htmlFor="return-reason" className="text-xs text-slate-300 block mb-1">Primary Return Reason *</label>
                 <select id="return-reason" name="return_reason" value={primaryReason} onChange={(e) => setPrimaryReason(e.target.value)} className="input-field">
-                  <option value="Size Too Small / Fit Issue">Size Too Small / Fit Issue</option><option value="Size Too Large / Fit Issue">Size Too Large / Fit Issue</option><option value="Fabric Quality Issue">Fabric Quality Issue</option><option value="Wrong Color / Style Sent">Wrong Color / Style Sent</option><option value="Received wrong product (different color / size / product)">Received wrong product (different color / size / product)</option><option value="Received Defective Product">Received Defective Product</option><option value="Did not like the product">Did not like the product</option><option value="Don't need the product anymore">Don't need the product anymore</option><option value="Other">Other</option>
+                  <option value="Size Too Small / Fit Issue">Size Too Small / Fit Issue</option>
+                  <option value="Size Too Large / Fit Issue">Size Too Large / Fit Issue</option>
+                  <option value="Fabric Quality Issue">Fabric Quality Issue</option>
+                  <option value="Have other quality related issues">Have other quality related issues</option>
+                  <option value="Wrong Color / Style Sent">Wrong Color / Style Sent</option>
+                  <option value="Received wrong product (different color / size / product)">Received wrong product (different color / size / product)</option>
+                  <option value="Received Defective Product">Received Defective Product</option>
+                  <option value="Did not like the product">Did not like the product</option>
+                  <option value="Don't need the product anymore">Don't need the product anymore</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div><label htmlFor="return-secondary-reason" className="text-xs text-slate-300 block mb-1">Secondary Return Reason</label><input id="return-secondary-reason" name="return_secondary_reason" type="text" value={secondaryReason} onChange={(e) => setSecondaryReason(e.target.value)} placeholder="e.g. Customer wanted exchange for larger size" className="input-field" /></div>
