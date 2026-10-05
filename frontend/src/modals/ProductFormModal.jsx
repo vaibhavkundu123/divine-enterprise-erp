@@ -830,7 +830,7 @@ export function evaluatePricingFormula(prVal, marginVal) {
   if (isNaN(rawMargin) || rawMargin < 0) rawMargin = 0;
   // If margin entered like 18 or 20, convert to decimal 0.18 or 0.20
   const marginDecimal = rawMargin > 1 ? rawMargin / 100 : rawMargin;
-  const marginPercent = Math.round(marginDecimal * 100 * 10) / 10;
+  const marginPercent = Math.round(marginDecimal * 100 * 100) / 100;
 
   // Formula exact terms:
   // Term 1: Cost + Profit Margin = pr + (pr * marginDecimal)
@@ -853,6 +853,62 @@ export function evaluatePricingFormula(prVal, marginVal) {
     t2: Math.round(t2 * 100) / 100,
     t3: Math.round(t3 * 1000) / 1000,
     meeshoPrice,
+    wrongReturnPrice,
+  };
+}
+
+/**
+ * Reverse Formula: Computes Profit Margin (%) from Meesho Price & Purchase Rate
+ * Derived directly from:
+ * Meesho Price = ROUND((Purchase Rate + (Purchase Rate * MarginDecimal)) * 1.05 * 1.20, 0)
+ * Meesho Price = ROUND(Purchase Rate * (1 + MarginDecimal) * 1.26, 0)
+ *
+ * MarginDecimal = (Meesho Price / (Purchase Rate * 1.26)) - 1
+ * MarginPercent = MarginDecimal * 100
+ */
+export function evaluateReversePricingFormula(prVal, meeshoPriceVal) {
+  const pr = parseFloat(prVal);
+  const mp = parseFloat(meeshoPriceVal);
+  if (isNaN(pr) || pr <= 0 || isNaN(mp) || mp <= 0) {
+    return {
+      isValid: false,
+      marginPercent: '',
+      marginDecimal: 0,
+      wrongReturnPrice: mp > 22 ? mp - 22 : '',
+    };
+  }
+
+  // Exact unrounded margin percentage
+  const exactMarginPercent = ((mp / (pr * 1.26)) - 1) * 100;
+
+  // Find cleanest human-friendly representation that maps forward to the exact same Meesho Price:
+  // 1. Try integer margin first (e.g. 20, 24)
+  const intMargin = Math.round(exactMarginPercent);
+  const intForwardPrice = Math.round(pr * (1 + intMargin / 100) * 1.26);
+
+  let finalMarginPercent;
+  if (intForwardPrice === Math.round(mp)) {
+    finalMarginPercent = intMargin;
+  } else {
+    // 2. Try 1 decimal place (e.g. 21.7, 24.5)
+    const dec1Margin = Math.round(exactMarginPercent * 10) / 10;
+    const dec1ForwardPrice = Math.round(pr * (1 + dec1Margin / 100) * 1.26);
+    if (dec1ForwardPrice === Math.round(mp)) {
+      finalMarginPercent = dec1Margin;
+    } else {
+      // 3. Fallback to 2 decimal places (e.g. 21.69)
+      finalMarginPercent = Math.round(exactMarginPercent * 100) / 100;
+    }
+  }
+
+  const wrongReturnPrice = mp > 22 ? mp - 22 : 0;
+
+  return {
+    isValid: true,
+    pr,
+    meeshoPrice: mp,
+    marginPercent: finalMarginPercent,
+    marginDecimal: finalMarginPercent / 100,
     wrongReturnPrice,
   };
 }
@@ -1112,7 +1168,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         importer_address: isIndia ? 'Not Required' : (initialData.importer_address || ''),
         importer_pincode: isIndia ? 'Not Required' : (initialData.importer_pincode || ''),
         purchase_rate: initialData.purchase_rate != null ? initialData.purchase_rate : '',
-        profit_margin: initialData.profit_margin != null ? (initialData.profit_margin <= 1 ? Math.round(initialData.profit_margin * 100) : initialData.profit_margin) : '',
+        profit_margin: initialData.profit_margin != null ? (initialData.profit_margin <= 1 ? Math.round(initialData.profit_margin * 100 * 100) / 100 : initialData.profit_margin) : '',
         meesho_price: initialData.meesho_price != null ? initialData.meesho_price : '',
         wrong_return_price: initialData.wrong_return_price != null ? initialData.wrong_return_price : '',
         mrp_pcs: initialData.mrp_pcs != null ? initialData.mrp_pcs : '',
@@ -1167,15 +1223,26 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
     setFormData((prev) => {
       const next = { ...prev, [field]: val };
 
-      // 1. Reactive Pricing: if purchase_rate or profit_margin changes
-      if (field === 'purchase_rate' || field === 'profit_margin') {
-        const prVal = field === 'purchase_rate' ? val : prev.purchase_rate;
-        const marginVal = field === 'profit_margin' ? val : prev.profit_margin;
-        if (prVal !== '' && parseFloat(prVal) > 0) {
-          const evalResult = evaluatePricingFormula(prVal, marginVal);
-          if (evalResult.isValid) {
-            next.meesho_price = evalResult.meeshoPrice;
-            next.wrong_return_price = evalResult.wrongReturnPrice;
+      // 1. Reactive Pricing: if purchase_rate changes
+      if (field === 'purchase_rate') {
+        const prVal = val;
+        const prNum = parseFloat(prVal);
+        const marginVal = prev.profit_margin;
+        const mpVal = prev.meesho_price;
+
+        if (prVal !== '' && prNum > 0) {
+          if (marginVal !== '' && !isNaN(parseFloat(marginVal))) {
+            const evalResult = evaluatePricingFormula(prVal, marginVal);
+            if (evalResult.isValid) {
+              next.meesho_price = evalResult.meeshoPrice;
+              next.wrong_return_price = evalResult.wrongReturnPrice;
+            }
+          } else if (mpVal !== '' && parseFloat(mpVal) > 0) {
+            const revCalc = evaluateReversePricingFormula(prNum, parseFloat(mpVal));
+            if (revCalc.isValid) {
+              next.profit_margin = revCalc.marginPercent;
+              next.wrong_return_price = revCalc.wrongReturnPrice;
+            }
           }
         } else if (prVal === '') {
           next.meesho_price = '';
@@ -1183,11 +1250,38 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
         }
       }
 
-      // 2. If user manually changes meesho_price, update wrong_return_price
+      // 2. Reactive Pricing: if profit_margin changes, calculate meesho_price & wrong_return_price
+      if (field === 'profit_margin') {
+        const prVal = next.purchase_rate;
+        const prNum = parseFloat(prVal);
+        if (prVal !== '' && prNum > 0) {
+          if (val !== '' && !isNaN(parseFloat(val))) {
+            const evalResult = evaluatePricingFormula(prVal, val);
+            if (evalResult.isValid) {
+              next.meesho_price = evalResult.meeshoPrice;
+              next.wrong_return_price = evalResult.wrongReturnPrice;
+            }
+          } else if (val === '') {
+            next.meesho_price = '';
+            next.wrong_return_price = '';
+          }
+        }
+      }
+
+      // 3. Reverse Reactive Pricing: if user changes meesho_price, adjust profit_margin & wrong_return_price
       if (field === 'meesho_price') {
-        const num = parseFloat(val);
-        if (!isNaN(num) && num > 22) {
-          next.wrong_return_price = num - 22;
+        const mpNum = parseFloat(val);
+        const prVal = next.purchase_rate;
+        const prNum = parseFloat(prVal);
+
+        if (!isNaN(mpNum) && mpNum > 0) {
+          next.wrong_return_price = mpNum > 22 ? mpNum - 22 : 0;
+          if (!isNaN(prNum) && prNum > 0) {
+            const revCalc = evaluateReversePricingFormula(prNum, mpNum);
+            if (revCalc.isValid) {
+              next.profit_margin = revCalc.marginPercent;
+            }
+          }
         } else if (val === '') {
           next.wrong_return_price = '';
         }
@@ -1605,7 +1699,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                       type="number"
                       step="any"
                       required
-                      placeholder="Auto-calculated (e.g. 325)"
+                      placeholder="e.g. 345 (Bidirectional Auto-linked)"
                       value={formData.meesho_price}
                       onChange={(e) => handleChange('meesho_price', e.target.value)}
                       className="w-full bg-slate-950/80 border border-emerald-500/60 rounded-lg px-3 py-2 text-xs text-emerald-400 font-bold focus:outline-none focus:border-emerald-400 font-mono"
@@ -1673,7 +1767,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                         FX FORMULA
                       </span>
                       <span className="text-xs font-semibold text-emerald-300">
-                        Live Formula Engine (Barcode Master & Meesho Catalog)
+                        Bidirectional Formula Engine (Cost + Profit ⇄ Meesho Price)
                       </span>
                     </div>
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700 w-fit">
@@ -1682,7 +1776,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                   </div>
 
                   <div className="text-[11px] font-mono bg-slate-950/90 p-2.5 rounded-lg border border-slate-800 text-emerald-300 overflow-x-auto whitespace-pre">
-                    =ROUND(($O2+($O2*$P2))*1.05*1.20, 0)
+                    Forward: =ROUND(($O2+($O2*$P2))*1.05*1.20, 0) | Reverse: Margin % = ((Meesho / (Cost * 1.26)) - 1) * 100
                   </div>
 
                   {(() => {
@@ -1691,7 +1785,7 @@ export default function ProductFormModal({ isOpen, onClose, onSuccess, initialDa
                       return (
                         <div className="text-xs text-slate-400 italic bg-slate-900/60 p-3 rounded-lg border border-slate-800 flex items-center gap-2">
                           <span>💡</span>
-                          <span>Enter <strong>Purchase Rate (₹)</strong> and <strong>Profit Margin (%)</strong> above — Meesho Selling Price and Wrong Return Price will compute right then and there.</span>
+                          <span>Enter <strong>Purchase Rate (₹)</strong> and either <strong>Profit Margin (%)</strong> or <strong>Meesho Price (₹)</strong> above — both will adjust bidirectionally right then and there.</span>
                         </div>
                       );
                     }
