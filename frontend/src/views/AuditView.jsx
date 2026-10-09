@@ -18,12 +18,16 @@ export default function AuditView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [logLimit, setLogLimit] = useState('ALL');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   const loadLogs = () => {
     api.getAudit({
       category: selectedCategory !== 'ALL' ? selectedCategory : undefined,
       search: search || undefined,
+      limit: logLimit === 'ALL' ? undefined : parseInt(logLimit, 10),
+      order: sortOrder,
     })
       .then((data) => setLogs(data))
       .catch((err) => console.error(err))
@@ -32,7 +36,7 @@ export default function AuditView() {
 
   useEffect(() => {
     loadLogs();
-  }, [selectedCategory, search]);
+  }, [selectedCategory, search, logLimit, sortOrder]);
 
   // 5-second auto-refresh polling
   useEffect(() => {
@@ -41,7 +45,7 @@ export default function AuditView() {
       loadLogs();
     }, 5000);
     return () => clearInterval(timer);
-  }, [autoRefresh, selectedCategory, search]);
+  }, [autoRefresh, selectedCategory, search, logLimit, sortOrder]);
 
   const handleClear = async () => {
     if (!window.confirm('Archive active logs to persistent disk snapshot and clear active audit trail?')) return;
@@ -103,6 +107,34 @@ export default function AuditView() {
               className="input-field text-xs h-9 bg-slate-900 border-slate-700"
             />
           </div>
+
+          <select
+            value={logLimit}
+            onChange={(e) => setLogLimit(e.target.value)}
+            className="input-field text-xs h-9 py-1 bg-slate-900 border-slate-700 font-semibold cursor-pointer"
+            title="Log volume limit"
+          >
+            <option value="ALL">All Recorded Logs</option>
+            <option value="100">Latest 100 Logs</option>
+            <option value="250">Latest 250 Logs</option>
+            <option value="500">Latest 500 Logs</option>
+            <option value="1000">Latest 1,000 Logs</option>
+          </select>
+
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="input-field text-xs h-9 py-1 bg-slate-900 border-slate-700 font-semibold cursor-pointer"
+            title="Sort chronological direction"
+          >
+            <option value="desc">Newest First (Latest ↓)</option>
+            <option value="asc">Oldest First (Earliest ↑)</option>
+          </select>
+
+          <span className="px-2.5 py-1.5 rounded-lg bg-blue-500/15 text-blue-300 border border-blue-500/30 text-xs font-semibold whitespace-nowrap font-mono flex items-center gap-1.5">
+            <History className="w-3.5 h-3.5" />
+            <span>{logs.length} Total Logs</span>
+          </span>
 
           <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer select-none" data-tour="audit-poll">
             <input
@@ -220,7 +252,7 @@ export default function AuditView() {
               <tfoot className="bg-slate-900 border-t-2 border-slate-700 font-bold text-white">
                 <tr>
                   <td className="py-3 px-4 font-mono text-xs text-blue-400">TOTAL</td>
-                  <td className="py-3 px-4 text-slate-300 text-xs">{filtered.length} Events Logged</td>
+                  <td className="py-3 px-4 text-slate-300 text-xs">{filtered.length} Events Displayed (of {logs.length} loaded)</td>
                   <td className="py-3 px-4 text-slate-400 text-xs">-</td>
                   <td className="py-3 px-4 text-slate-400 text-xs">-</td>
                   <td className="py-3 px-4 text-slate-400 text-xs">-</td>

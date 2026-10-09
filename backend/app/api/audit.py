@@ -13,11 +13,13 @@ router = APIRouter(prefix="/api/audit", tags=["Regulatory Audit Trail"])
 
 @router.get("", response_model=List[ActivityAuditLogOut])
 def list_audit_logs(
+    response: Response,
     category: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: Optional[int] = Query(None, ge=1, le=50000),
     offset: int = Query(0, ge=0),
+    order: str = Query("desc", description="desc for newest first, asc for oldest first"),
     db: Session = Depends(get_db),
 ):
     query = db.query(ActivityAuditLog)
@@ -32,7 +34,25 @@ def list_audit_logs(
             (ActivityAuditLog.details.ilike(s)) |
             (ActivityAuditLog.action.ilike(s))
         )
-    return query.order_by(ActivityAuditLog.id.asc()).offset(offset).limit(limit).all()
+
+    total_count = query.count()
+    response.headers["X-Total-Count"] = str(total_count)
+
+    if order.lower() == "asc":
+        query = query.order_by(ActivityAuditLog.id.asc())
+    else:
+        query = query.order_by(ActivityAuditLog.id.desc())
+
+    if offset > 0:
+        query = query.offset(offset)
+    if limit is not None and limit > 0:
+        query = query.limit(limit)
+
+    return query.all()
+
+@router.get("/count")
+def get_audit_count(db: Session = Depends(get_db)):
+    return {"total_logs": db.query(ActivityAuditLog).count()}
 
 @router.get("/export-csv")
 def export_audit_logs_csv(db: Session = Depends(get_db)):
