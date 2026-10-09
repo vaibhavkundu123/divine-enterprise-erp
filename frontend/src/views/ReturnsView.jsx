@@ -13,6 +13,8 @@ const COLUMNS = [
   { key: 'quantity', sortable: true, filterable: true },
   { key: 'refund_amount', sortable: true, filterable: true },
   { key: 'reverse_fee', sortable: true, filterable: true },
+  { key: 'claim_amount', sortable: true, filterable: true, getValue: (r) => r.claim_amount ? `₹${r.claim_amount}` : '—' },
+  { key: 'claim_date', sortable: true, filterable: true, getValue: (r) => r.claim_date || '—' },
   { key: 'primary_reason', sortable: true, filterable: true },
   { key: 'secondary_reason', sortable: true, filterable: true, getValue: (r) => r.secondary_reason || '—' },
   { key: 'reverse_awb', sortable: true, filterable: true, getValue: (r) => r.reverse_awb || '—' },
@@ -136,15 +138,49 @@ export default function ReturnsView() {
       case 'Received': case 'Intake': return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30 animate-pulse">Received (Dock)</span>;
       case 'Restocked': return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Restocked</span>;
       case 'Damaged': return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">Damaged (Loss)</span>;
+      case 'Claim Settled': return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">Claim Settled</span>;
       default: return <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-800 text-slate-400">{status}</span>;
     }
   };
 
   const handleExcelExport = () => {
-    const formatted = filtered.map((r, i) => ({ 'Sl. No.': i + 1, Date: r.date, 'Style SKU': r.style_no, Quantity: r.quantity, 'Refund Amount ($)': r.refund_amount, 'Reverse Fee ($)': r.reverse_fee, 'Primary Reason': r.primary_reason, 'Secondary Reason': r.secondary_reason || '', 'Reverse AWB': r.reverse_awb || '', Status: r.status, 'Date Received': r.received_date || '', 'Date Restocked': r.restocked_date || '' }));
+    const formatted = filtered.map((r, i) => ({
+      'Sl. No.': i + 1,
+      Date: r.date,
+      'Style SKU': r.style_no,
+      Quantity: r.quantity,
+      'Refund Amount (₹)': r.refund_amount,
+      'Reverse Fee (₹)': r.reverse_fee,
+      'Claim Amount (₹)': r.claim_amount || 0,
+      'Claim Date': r.claim_date || '',
+      'Primary Reason': r.primary_reason,
+      'Secondary Reason': r.secondary_reason || '',
+      'Reverse AWB': r.reverse_awb || '',
+      Status: r.status,
+      'Date Received': r.received_date || '',
+      'Date Restocked': r.restocked_date || '',
+    }));
     exportToExcel(formatted, `Customer_Returns_${new Date().toISOString().split('T')[0]}.xlsx`, 'Customer Returns');
   };
-  const handleCsvExport = () => { exportToCSV(filtered, `customer_returns_${new Date().toISOString().split('T')[0]}.csv`); };
+  const handleCsvExport = () => {
+    const formatted = filtered.map((r, i) => ({
+      'Sl. No.': i + 1,
+      Date: r.date,
+      'Style SKU': r.style_no,
+      Quantity: r.quantity,
+      'Refund Amount (₹)': r.refund_amount,
+      'Reverse Fee (₹)': r.reverse_fee,
+      'Claim Amount (₹)': r.claim_amount || 0,
+      'Claim Date': r.claim_date || '',
+      'Primary Reason': r.primary_reason,
+      'Secondary Reason': r.secondary_reason || '',
+      'Reverse AWB': r.reverse_awb || '',
+      Status: r.status,
+      'Date Received': r.received_date || '',
+      'Date Restocked': r.restocked_date || '',
+    }));
+    exportToCSV(formatted, `customer_returns_${new Date().toISOString().split('T')[0]}.csv`);
+  };
 
   const sharedHeaderProps = {
     sortConfig, columnFilters, onSort: requestSort, clearSort, getUniqueValues, getValueCounts,
@@ -163,7 +199,7 @@ export default function ReturnsView() {
             <input id="returns-search-input" name="returns_search" type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search SKU, Reason, AWB..." style={{ paddingLeft: '2.5rem' }} className="input-field text-xs h-9 bg-slate-900 border-slate-700" />
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none" data-tour="returns-status-filter">
-            {['ALL', 'In Transit', 'Received', 'Restocked', 'Damaged'].map((st) => (
+            {['ALL', 'In Transit', 'Received', 'Restocked', 'Damaged', 'Claim Settled'].map((st) => (
               <button key={st} onClick={() => setStatusFilter(st)} className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${statusFilter === st ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'}`}>{st}</button>
             ))}
           </div>
@@ -213,6 +249,8 @@ export default function ReturnsView() {
                 <SortableHeader label="Qty" columnKey="quantity" sortable align="center" {...sharedHeaderProps} />
                 <SortableHeader label="Refund Amount" columnKey="refund_amount" sortable align="right" {...sharedHeaderProps} />
                 <SortableHeader label="Reverse Fee" columnKey="reverse_fee" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Claim Amount" columnKey="claim_amount" sortable align="right" {...sharedHeaderProps} />
+                <SortableHeader label="Claim Date" columnKey="claim_date" sortable align="center" {...sharedHeaderProps} />
                 <SortableHeader label="Primary Reason" columnKey="primary_reason" sortable filterable {...sharedHeaderProps} activeFilterValues={columnFilters['primary_reason']} extraProps={{ 'data-tour': 'returns-col-reason' }} />
                 <SortableHeader label="Secondary Reason" columnKey="secondary_reason" sortable {...sharedHeaderProps} />
                 <SortableHeader label="Reverse AWB" columnKey="reverse_awb" sortable {...sharedHeaderProps} />
@@ -224,8 +262,8 @@ export default function ReturnsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {loading ? (<tr><td colSpan="14" className="py-8 text-center text-slate-400">Loading customer returns...</td></tr>
-              ) : filtered.length === 0 ? (<tr><td colSpan="14" className="py-8 text-center text-slate-400">No returns matching filter.</td></tr>
+              {loading ? (<tr><td colSpan="16" className="py-8 text-center text-slate-400">Loading customer returns...</td></tr>
+              ) : filtered.length === 0 ? (<tr><td colSpan="16" className="py-8 text-center text-slate-400">No returns matching filter.</td></tr>
               ) : (
                 filtered.map((r, idx) => (
                   <tr key={r.id} className="hover:bg-white/5 transition-colors">
@@ -235,6 +273,16 @@ export default function ReturnsView() {
                     <td className="py-3 px-4 text-center font-semibold text-white">{r.quantity}</td>
                     <td className="py-3 px-4 text-right font-mono">{formatCurrency(r.refund_amount)}</td>
                     <td className="py-3 px-4 text-right font-mono text-rose-300">{formatCurrency(r.reverse_fee)}</td>
+                    <td className="py-3 px-4 text-right font-mono">
+                      {r.claim_amount > 0 ? (
+                        <span className="text-purple-300 font-bold">{formatCurrency(r.claim_amount)}</span>
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono text-[11px] text-purple-300 whitespace-nowrap">
+                      {r.claim_date || '—'}
+                    </td>
                     <td className="py-3 px-4 text-slate-300 max-w-[140px] truncate" title={r.primary_reason}>{r.primary_reason}</td>
                     <td className="py-3 px-4 text-slate-400 max-w-[140px] truncate" title={r.secondary_reason || '—'}>{r.secondary_reason || '—'}</td>
                     <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">{r.reverse_awb || '—'}</td>
@@ -243,9 +291,18 @@ export default function ReturnsView() {
                     <td className="py-3 px-4 text-center font-mono text-[11px] text-emerald-400 whitespace-nowrap">{r.restocked_date || '—'}</td>
                     <td className="py-3 px-4 text-center whitespace-nowrap">
                       {r.status === 'In Transit' && (<button onClick={() => handleReceive(r.id)} className="px-2.5 py-1 rounded text-xs font-semibold bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30">Mark Received</button>)}
-                      {(r.status === 'Received' || r.status === 'Intake') && (<div className="flex items-center justify-center gap-1.5"><button onClick={() => handleRestock(r.id)} className="px-2.5 py-1 rounded text-xs font-semibold bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 border border-emerald-500/30">Restock</button><button onClick={() => handleDamage(r.id)} className="px-2.5 py-1 rounded text-xs font-semibold bg-rose-600/20 text-rose-300 hover:bg-rose-600/30 border border-rose-500/30">Damaged</button></div>)}
+                      {(r.status === 'Received' || r.status === 'Intake') && (
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button onClick={() => handleRestock(r.id)} className="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 border border-emerald-500/30">Restock</button>
+                          <button onClick={() => handleDamage(r.id)} className="px-2 py-0.5 rounded text-xs font-semibold bg-rose-600/20 text-rose-300 hover:bg-rose-600/30 border border-rose-500/30">Damaged</button>
+                          <button onClick={() => setQcModalReturn({ ...r, status: 'Claim Settled', qc_grade: 'Dispute' })} className="px-2 py-0.5 rounded text-xs font-semibold bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 border border-purple-500/30" title="Settle or dispute claim with Meesho">Settle Claim</button>
+                        </div>
+                      )}
                       {r.status === 'Restocked' && (<span className="text-[11px] text-emerald-400 font-mono">Restocked to Inventory</span>)}
                       {r.status === 'Damaged' && (<span className="text-[11px] text-rose-400 font-mono">Loss Written Off</span>)}
+                      {r.status === 'Claim Settled' && (
+                        <span className="text-[11px] text-purple-300 font-mono font-bold">SPF Claim: ₹{Number(r.claim_amount || 0).toFixed(2)}</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
@@ -261,6 +318,7 @@ export default function ReturnsView() {
               const totalQty = filtered.reduce((a, r) => a + (r.quantity || 0), 0);
               const totalRefund = filtered.reduce((a, r) => a + (r.refund_amount || 0), 0);
               const totalReverseFee = filtered.reduce((a, r) => a + (r.reverse_fee || 0), 0);
+              const totalClaim = filtered.reduce((a, r) => a + (r.claim_amount || 0), 0);
               return (
                 <tfoot className="bg-slate-900 border-t-2 border-slate-700 font-bold text-white">
                   <tr>
@@ -270,8 +328,11 @@ export default function ReturnsView() {
                     <td className="py-3 px-4 text-center font-bold text-white text-xs">{totalQty}</td>
                     <td className="py-3 px-4 text-right font-bold text-rose-400 font-mono text-xs">{formatCurrency(totalRefund)}</td>
                     <td className="py-3 px-4 text-right font-bold text-amber-400 font-mono text-xs">{formatCurrency(totalReverseFee)}</td>
+                    <td className="py-3 px-4 text-right font-bold text-purple-300 font-mono text-xs">{formatCurrency(totalClaim)}</td>
+                    <td className="py-3 px-4 text-center text-slate-400 text-xs">-</td>
                     <td className="py-3 px-4 text-slate-400 text-xs">-</td>
                     <td className="py-3 px-4 text-slate-400 text-xs">-</td>
+                    <td className="py-3 px-4 text-center text-slate-400 text-xs">-</td>
                     <td className="py-3 px-4 text-center text-slate-400 text-xs">-</td>
                     <td className="py-3 px-4 text-center text-slate-400 text-xs">-</td>
                     <td className="py-3 px-4 text-center text-slate-400 text-xs">-</td>

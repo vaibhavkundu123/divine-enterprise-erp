@@ -48,6 +48,11 @@ def test_excel_sync_workbooks_and_sheets(tmp_path):
     sales_formula = any("=" in str(cell.value) for cell in ws_sales[2] if cell.value)
     assert sales_formula, "Sales sheet should contain dynamic formulas"
 
+    ws_cr = wb_sales["Customer Returns"]
+    header_vals = [cell.value for cell in ws_cr[1]]
+    assert "Claim Amount ($)" in header_vals
+    assert "Claim Date" in header_vals
+
     db.close()
 
 def test_flat_csv_generation(tmp_path):
@@ -66,4 +71,10 @@ def test_flat_csv_generation(tmp_path):
         f_path = tmp_path / fn
         assert f_path.exists(), f"Missing CSV {fn}"
         assert f_path.stat().st_size > 0, f"CSV {fn} is empty"
+
+    # Verify customer_returns.csv header has claim_amount and claim_date
+    with open(tmp_path / "customer_returns.csv", "r", encoding="utf-8") as f:
+        header_line = f.readline()
+        assert "claim_amount" in header_line
+        assert "claim_date" in header_line
     db.close()

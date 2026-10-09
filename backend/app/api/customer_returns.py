@@ -2,11 +2,17 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from backend.app.db.session import get_db
 from backend.app.models.entities import CustomerReturn
 from backend.app.schemas.schemas import CustomerReturnCreate, CustomerReturnUpdate, CustomerReturnOut
 from backend.app.services.excel_sync import sync_all
 from backend.app.api.deps import log_audit
+
+class ClaimSettlementPayload(BaseModel):
+    claim_amount: float
+    claim_date: Optional[str] = None
+    notes: Optional[str] = None
 
 router = APIRouter(prefix="/api/customer-returns", tags=["Customer Returns"])
 
@@ -44,6 +50,8 @@ def create_customer_return(
         quantity=max(1, payload.quantity),
         refund_amount=payload.refund_amount,
         reverse_fee=payload.reverse_fee,
+        claim_amount=payload.claim_amount or 0.0,
+        claim_date=payload.claim_date,
         primary_reason=payload.primary_reason,
         secondary_reason=payload.secondary_reason,
         status=payload.status or "In Transit",
@@ -112,6 +120,40 @@ def mark_customer_return_damaged(
         action="DAMAGE",
         summary=f"Customer return {ret.return_id} ({ret.style_no}) written off as Damaged",
         status="WARNING",
+    )
+    background_tasks.add_task(sync_all)
+    return ret
+
+@router.post("/{ret_id}/settle-claim", response_model=CustomerReturnOut)
+def settle_customer_return_claim(
+    ret_id: int,
+    payload: ClaimSettlementPayload,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    ret = db.query(CustomerReturn).filter(CustomerReturn.id == ret_id).first()
+    if not ret:
+        raise HTTPException(status_code=404, detail="Return record not found")
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    ret.claim_amount = float(payload.claim_amount)
+    ret.claim_date = payload.claim_date if payload.claim_date else today
+    ret.status = "Claim Settled"
+    ret.qc_grade = "Dispute"
+    if not ret.received_date:
+        ret.received_date = today
+    if payload.notes:
+        existing_notes = f"{ret.notes} | " if ret.notes else ""
+        ret.notes = f"{existing_notes}{payload.notes}"
+
+    db.commit()
+    db.refresh(ret)
+
+    log_audit(
+        db,
+        category="CUSTOMER_RETURN",
+        action="CLAIM_SETTLED",
+        summary=f"Settled claim for {ret.return_id} ({ret.style_no}): claim ₹{ret.claim_amount:.2f} on {ret.claim_date}",
     )
     background_tasks.add_task(sync_all)
     return ret

@@ -125,6 +125,8 @@ class CustomerReturnBase(BaseModel):
     quantity: int = 1
     refund_amount: float
     reverse_fee: float = 175.0
+    claim_amount: float = 0.0
+    claim_date: Optional[str] = None
     primary_reason: str = "Size Too Small / Fit Issue"
     secondary_reason: Optional[str] = None
     status: str = "In Transit"
@@ -141,6 +143,8 @@ class CustomerReturnUpdate(BaseModel):
     quantity: Optional[int] = None
     refund_amount: Optional[float] = None
     reverse_fee: Optional[float] = None
+    claim_amount: Optional[float] = None
+    claim_date: Optional[str] = None
     primary_reason: Optional[str] = None
     secondary_reason: Optional[str] = None
     status: Optional[str] = None

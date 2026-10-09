@@ -98,9 +98,9 @@ def export_flat_csvs(db: Session, out_dir: Path = DATA_DIR):
     returns = db.query(CustomerReturn).order_by(CustomerReturn.date.asc()).all()
     with open(out_dir / "customer_returns.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["id", "return_id", "date", "style_no", "quantity", "refund_amount", "reverse_fee", "primary_reason", "secondary_reason", "status", "qc_grade", "received_date", "restocked_date", "reverse_awb", "notes"])
+        writer.writerow(["id", "return_id", "date", "style_no", "quantity", "refund_amount", "reverse_fee", "claim_amount", "claim_date", "primary_reason", "secondary_reason", "status", "qc_grade", "received_date", "restocked_date", "reverse_awb", "notes"])
         for cr in returns:
-            writer.writerow([cr.id, cr.return_id, cr.date, cr.style_no, cr.quantity, cr.refund_amount, cr.reverse_fee, cr.primary_reason, cr.secondary_reason, cr.status, cr.qc_grade, cr.received_date, cr.restocked_date, cr.reverse_awb, cr.notes])
+            writer.writerow([cr.id, cr.return_id, cr.date, cr.style_no, cr.quantity, cr.refund_amount, cr.reverse_fee, getattr(cr, "claim_amount", 0.0) or 0.0, getattr(cr, "claim_date", "") or "", cr.primary_reason, cr.secondary_reason, cr.status, cr.qc_grade, cr.received_date, cr.restocked_date, cr.reverse_awb, cr.notes])
 
     # 5. item_exchanges.csv
     exchanges = db.query(ItemExchange).order_by(ItemExchange.date.asc()).all()
@@ -405,35 +405,37 @@ def export_sales_inventory_workbook(db: Session, target_path: Optional[Path] = N
 
     # 4. Customer Returns
     ws_cr = wb.create_sheet(title="Customer Returns")
-    cr_headers = ["Return ID", "Date", "Style No.", "Quantity", "Refund Amount ($)", "Reverse Fee ($)", "Primary Reason", "Secondary Reason", "Status", "Received Date", "Restocked Date", "Reverse AWB", "Notes"]
+    cr_headers = ["Return ID", "Date", "Style No.", "Quantity", "Refund Amount ($)", "Reverse Fee ($)", "Claim Amount ($)", "Claim Date", "Primary Reason", "Secondary Reason", "Status", "Received Date", "Restocked Date", "Reverse AWB", "Notes"]
     apply_header_style(ws_cr, cr_headers)
     rets = db.query(CustomerReturn).order_by(CustomerReturn.date.asc(), CustomerReturn.id.asc()).all()
     cr_row = 2
     for cr in rets:
         ws_cr.append([
             cr.return_id, cr.date, cr.style_no, cr.quantity, cr.refund_amount, cr.reverse_fee,
+            getattr(cr, "claim_amount", 0.0) or 0.0, getattr(cr, "claim_date", "") or "",
             cr.primary_reason, cr.secondary_reason or "", cr.status, cr.received_date or "",
             cr.restocked_date or "", cr.reverse_awb or "", cr.notes or ""
         ])
         ws_cr.cell(row=cr_row, column=4).number_format = INT_FORMAT
         ws_cr.cell(row=cr_row, column=5).number_format = CURRENCY_FORMAT
         ws_cr.cell(row=cr_row, column=6).number_format = CURRENCY_FORMAT
-        for c in range(1, 14):
+        ws_cr.cell(row=cr_row, column=7).number_format = CURRENCY_FORMAT
+        for c in range(1, 16):
             ws_cr.cell(row=cr_row, column=c).border = CELL_BORDER
         cr_row += 1
     if cr_row > 2:
         ws_cr.append([
-            "Total Summary", "", "", f"=SUM(D2:D{cr_row-1})", f"=SUM(E2:E{cr_row-1})", f"=SUM(F2:F{cr_row-1})",
-            "", "", "", "", "", "", ""
+            "Total Summary", "", "", f"=SUM(D2:D{cr_row-1})", f"=SUM(E2:E{cr_row-1})", f"=SUM(F2:F{cr_row-1})", f"=SUM(G2:G{cr_row-1})",
+            "", "", "", "", "", "", "", ""
         ])
-        for c in range(1, 14):
+        for c in range(1, 16):
             cell = ws_cr.cell(row=cr_row, column=c)
             cell.font = SUMMARY_FONT
             cell.fill = SUMMARY_FILL
             cell.border = TOTAL_BORDER
             if c == 4:
                 cell.number_format = INT_FORMAT
-            elif c in (5, 6):
+            elif c in (5, 6, 7):
                 cell.number_format = CURRENCY_FORMAT
     auto_fit_columns(ws_cr)
 

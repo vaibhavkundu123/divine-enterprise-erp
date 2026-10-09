@@ -29,7 +29,7 @@ def get_trend_waveforms(
     sales = db.query(SalesOrder).order_by(SalesOrder.date.asc()).all()
     ads = db.query(AdSpend).order_by(AdSpend.date.asc()).all()
     rtos = db.query(RTOPipeline).filter(RTOPipeline.status.in_(["Received", "Restocked", "Damaged"])).all()
-    returns = db.query(CustomerReturn).filter(CustomerReturn.status.in_(["Intake", "Received", "Restocked", "Damaged"])).all()
+    returns = db.query(CustomerReturn).filter(CustomerReturn.status.in_(["Intake", "Received", "Restocked", "Damaged", "Dispute", "Claim Settled"])).all()
 
     # Aggregate by date
     dates_map: Dict[str, Dict[str, float]] = {}
@@ -56,7 +56,8 @@ def get_trend_waveforms(
     for cr in returns:
         d = cr.received_date or cr.date
         if d in dates_map:
-            dates_map[d]["refunds"] += cr.refund_amount
+            net_refund = max(0.0, cr.refund_amount - (getattr(cr, "claim_amount", 0.0) or 0.0))
+            dates_map[d]["refunds"] += net_refund
 
     sorted_dates = sorted(dates_map.keys())
 

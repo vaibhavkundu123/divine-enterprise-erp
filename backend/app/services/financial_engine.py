@@ -98,9 +98,11 @@ def calculate_adjusted_revenue(
     total_system_revenue: float,
     rto_reversed_revenue_received: float,
     cr_refunds_issued_arrived: float,
+    cr_claims_settled: float = 0.0,
 ) -> float:
-    """Adjusted Revenue = max(0, Total System Revenue - Received RTO Reversed Rev - Arrived CR Refunds)"""
-    realized = total_system_revenue - rto_reversed_revenue_received - cr_refunds_issued_arrived
+    """Adjusted Revenue = max(0, Total System Revenue - Received RTO Reversed Rev - (Arrived CR Refunds - Settled Claims))"""
+    net_cr_refunds = max(0.0, cr_refunds_issued_arrived - cr_claims_settled)
+    realized = total_system_revenue - rto_reversed_revenue_received - net_cr_refunds
     return round(max(0.0, realized), 2)
 
 # 12. Adjusted Units Sold
@@ -298,8 +300,10 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
     total_cr_units = sum(cr.quantity for cr in returns)
     total_cr_fees = sum(cr.reverse_fee for cr in returns)
 
-    arrived_cr = [cr for cr in returns if cr.status in ("Intake", "Received", "Restocked", "Damaged", "Dispute")]
+    arrived_cr = [cr for cr in returns if cr.status in ("Intake", "Received", "Restocked", "Damaged", "Dispute", "Claim Settled")]
     cr_refunds_arrived = sum(cr.refund_amount for cr in arrived_cr)
+    total_cr_claims = sum((getattr(cr, 'claim_amount', 0.0) or 0.0) for cr in returns)
+    net_cr_refunds_arrived = sum(max(0.0, cr.refund_amount - (getattr(cr, 'claim_amount', 0.0) or 0.0)) for cr in arrived_cr)
     cr_arrived_units = sum(cr.quantity for cr in arrived_cr)
     cr_in_transit_units = sum(cr.quantity for cr in returns if cr.status == "In Transit")
     cr_received_fees = sum(cr.reverse_fee for cr in arrived_cr)
@@ -308,7 +312,7 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
     cr_holding_units = sum(cr.quantity for cr in cr_holding_parcels)
     cr_holding_value = sum(cr.quantity * wac_map.get(cr.style_no.strip(), 0.0) for cr in cr_holding_parcels)
     restocked_cr_units = sum(cr.quantity for cr in returns if cr.status == "Restocked")
-    damaged_cr_units = sum(cr.quantity for cr in returns if cr.status == "Damaged")
+    damaged_cr_units = sum(cr.quantity for cr in returns if cr.status in ("Damaged", "Claim Settled"))
 
     # Exchange status counts
     exchange_in_transit_units = sum(e.quantity for e in exchanges if e.return_status == "In Transit")
@@ -316,7 +320,7 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
     exchange_restocked_units = sum(e.quantity for e in exchanges if e.return_status == "Restocked")
 
     # 6. Post-Return Realized Metrics
-    adjusted_revenue = round(max(0.0, total_system_revenue - rto_rev_received - cr_refunds_arrived), 2)
+    adjusted_revenue = round(max(0.0, total_system_revenue - rto_rev_received - net_cr_refunds_arrived), 2)
     adjusted_units_sold = max(0, total_units_sold - rto_holding_units - cr_holding_units)
     aov = round(adjusted_revenue / adjusted_units_sold, 2) if adjusted_units_sold > 0 else 0.0
 
@@ -327,8 +331,8 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
     # 8. Net Profits (Dispatched & Net Realized)
     # Dispatched Net Profit = Gross Profit - Ad Spend - Customer Return Courier Fees Incurred ($700)
     dispatched_net_profit = round(gross_profit - total_ad_spend - cr_received_fees, 2)
-    # Net Realized Cash = Dispatched Net Profit - RTO Reversed Profit ($488.29) - Realized Refunds ($1,260.49)
-    net_realized_profit = round(dispatched_net_profit - rto_reversed_profit - cr_refunds_arrived, 2)
+    # Net Realized Cash = Dispatched Net Profit - RTO Reversed Profit ($488.29) - Net Realized Refunds
+    net_realized_profit = round(dispatched_net_profit - rto_reversed_profit - net_cr_refunds_arrived, 2)
     net_realized_margin = round((net_realized_profit / adjusted_revenue * 100), 2) if adjusted_revenue > 0 else 0.0
 
     # 9. Reverse Logistics Rates
@@ -410,7 +414,9 @@ def compute_system_financial_metrics(db: Session) -> Dict[str, Any]:
         "cr_in_transit_units": cr_in_transit_units,
         "cr_rate": reverse_rates["cr_rate"],
         "cr_received_fees": cr_received_fees,
-        "cr_realized_refunds": cr_refunds_arrived,
+        "cr_realized_refunds": round(net_cr_refunds_arrived, 2),
+        "cr_gross_refunds": round(cr_refunds_arrived, 2),
+        "cr_claims_settled": round(total_cr_claims, 2),
         "exchange_units": total_exchange_units,
         "exchange_rate": reverse_rates["exchange_rate"],
         "exchange_in_transit_units": exchange_in_transit_units,

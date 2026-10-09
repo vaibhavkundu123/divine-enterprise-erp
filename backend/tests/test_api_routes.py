@@ -140,6 +140,30 @@ def test_customer_returns_routes():
     assert qc_res.status_code == 200
     assert qc_res.json()["qc_grade"] == "Grade A"
 
+    # Settle claim
+    claim_res = client.post(f"/api/customer-returns/{ret_id}/settle-claim", json={
+        "claim_amount": 332.58,
+        "claim_date": "2026-10-09",
+        "notes": "Approved Meesho SPF claim for wrong product received",
+    })
+    assert claim_res.status_code == 200
+    claim_data = claim_res.json()
+    assert claim_data["status"] == "Claim Settled"
+    assert claim_data["claim_amount"] == 332.58
+    assert claim_data["claim_date"] == "2026-10-09"
+    assert claim_data["qc_grade"] == "Dispute"
+
+    # Edit claim and date via PUT (verifying full editability)
+    edit_res = client.put(f"/api/customer-returns/{ret_id}", json={
+        "claim_amount": 330.00,
+        "claim_date": "2026-10-10",
+        "notes": "Corrected claim date and amount",
+    })
+    assert edit_res.status_code == 200
+    edit_data = edit_res.json()
+    assert edit_data["claim_amount"] == 330.00
+    assert edit_data["claim_date"] == "2026-10-10"
+
 def test_exchanges_routes():
     ex_res = client.post("/api/exchanges", json={
         "date": "2026-09-17",

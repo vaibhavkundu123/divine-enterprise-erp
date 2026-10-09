@@ -104,9 +104,11 @@ class CustomerReturn(Base):
     quantity: Mapped[int] = mapped_column(Integer, default=1)
     refund_amount: Mapped[float] = mapped_column(Float, default=0.0)
     reverse_fee: Mapped[float] = mapped_column(Float, default=0.0)
+    claim_amount: Mapped[float] = mapped_column(Float, default=0.0)
+    claim_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     primary_reason: Mapped[str] = mapped_column(String(150), default="Size Too Small / Fit Issue")
     secondary_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(50), default="In Transit", index=True)  # In Transit, Intake, Restocked, Damaged, Dispute
+    status: Mapped[str] = mapped_column(String(50), default="In Transit", index=True)  # In Transit, Intake, Restocked, Damaged, Claim Settled, Dispute
     qc_grade: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Grade A, Grade B, Damaged, Dispute
     received_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     restocked_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
@@ -122,6 +124,8 @@ class CustomerReturn(Base):
             "quantity": self.quantity,
             "refund_amount": self.refund_amount,
             "reverse_fee": self.reverse_fee,
+            "claim_amount": self.claim_amount or 0.0,
+            "claim_date": self.claim_date,
             "primary_reason": self.primary_reason,
             "secondary_reason": self.secondary_reason,
             "status": self.status,

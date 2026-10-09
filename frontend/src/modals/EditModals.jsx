@@ -533,6 +533,8 @@ export function CustomerReturnEditModal({ ret, returnItem, isOpen = true, onClos
   const [quantity, setQuantity] = useState('1');
   const [refundAmount, setRefundAmount] = useState('');
   const [reverseFee, setReverseFee] = useState('175.00');
+  const [claimAmount, setClaimAmount] = useState('0');
+  const [claimDate, setClaimDate] = useState('');
   const [primaryReason, setPrimaryReason] = useState('Size Too Small / Fit Issue');
   const [secondaryReason, setSecondaryReason] = useState('');
   const [reverseAwb, setReverseAwb] = useState('');
@@ -551,6 +553,8 @@ export function CustomerReturnEditModal({ ret, returnItem, isOpen = true, onClos
       setQuantity(String(currentReturn.quantity ?? 1));
       setRefundAmount(String(currentReturn.refund_amount ?? ''));
       setReverseFee(String(currentReturn.reverse_fee ?? 175));
+      setClaimAmount(String(currentReturn.claim_amount ?? 0));
+      setClaimDate(currentReturn.claim_date || '');
       setPrimaryReason(currentReturn.primary_reason || 'Size Too Small / Fit Issue');
       setSecondaryReason(currentReturn.secondary_reason || '');
       setReverseAwb(currentReturn.reverse_awb || '');
@@ -591,6 +595,8 @@ export function CustomerReturnEditModal({ ret, returnItem, isOpen = true, onClos
         quantity: q,
         refund_amount: refAmt,
         reverse_fee: parseFloat(reverseFee) || 0,
+        claim_amount: parseFloat(claimAmount) || 0,
+        claim_date: claimDate || null,
         primary_reason: primaryReason,
         secondary_reason: secondaryReason.trim() || null,
         reverse_awb: reverseAwb.trim() || null,
@@ -661,6 +667,7 @@ export function CustomerReturnEditModal({ ret, returnItem, isOpen = true, onClos
                 <option value="Received">Received (Dock)</option>
                 <option value="Restocked">Restocked</option>
                 <option value="Damaged">Damaged (Loss)</option>
+                <option value="Claim Settled">Claim Settled (SPF Approved)</option>
               </select>
             </div>
           </div>
@@ -805,6 +812,89 @@ export function CustomerReturnEditModal({ ret, returnItem, isOpen = true, onClos
                   <div className="text-[10px] text-slate-400">{g.desc}</div>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Meesho SPF Claim Settlement & Fraud Dispute Section */}
+          <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-500/30 text-xs space-y-3">
+            <div className="flex items-center justify-between pb-1.5 border-b border-purple-500/20">
+              <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                <span>🛡️ Meesho SPF Claim Settlement</span>
+              </span>
+              {(parseFloat(claimAmount) > 0 || status === 'Claim Settled') && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                  Claim Logged
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="edit-ret-claim-amt" className="block text-xs font-semibold text-slate-300 mb-1">
+                  Claim Settlement Amount (₹)
+                </label>
+                <input
+                  id="edit-ret-claim-amt"
+                  name="ret_claim_amt"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={claimAmount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setClaimAmount(val);
+                    if (parseFloat(val) > 0 && status !== 'Claim Settled') {
+                      setStatus('Claim Settled');
+                      setGrade('Dispute');
+                      if (!claimDate) {
+                        setClaimDate(new Date().toISOString().split('T')[0]);
+                      }
+                    }
+                  }}
+                  placeholder="e.g. 332.58"
+                  className="input-field border-purple-500/40 focus:border-purple-400 font-mono"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-ret-claim-date" className="block text-xs font-semibold text-slate-300 mb-1">
+                  Claim Settlement Date
+                </label>
+                <input
+                  id="edit-ret-claim-date"
+                  name="ret_claim_date"
+                  type="date"
+                  value={claimDate}
+                  onChange={(e) => setClaimDate(e.target.value)}
+                  className="input-field border-purple-500/40 focus:border-purple-400"
+                />
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-400 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800 space-y-1">
+              <div className="flex justify-between items-center text-slate-300">
+                <span>Customer Refund Deducted:</span>
+                <span className="font-mono text-rose-300">₹{parseFloat(refundAmount || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-300">
+                <span>Meesho Claim Approved (+):</span>
+                <span className="font-mono text-purple-300 font-bold">₹{parseFloat(claimAmount || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-200 pt-1 border-t border-slate-800 font-semibold">
+                <span>Net Unrecovered Refund Loss:</span>
+                <span className="font-mono text-amber-300 font-bold">
+                  ₹{Math.max(0, (parseFloat(refundAmount || 0) - parseFloat(claimAmount || 0))).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400 pt-0.5">
+                <span>Reverse Courier Shipping Fee:</span>
+                <span className="font-mono text-slate-300">₹{parseFloat(reverseFee || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Warehouse Inventory Restock:</span>
+                <span className={`font-mono font-bold ${status === 'Claim Settled' || grade === 'Dispute' || status === 'Damaged' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {status === 'Claim Settled' || grade === 'Dispute' || status === 'Damaged' ? '+0 Units (Written Off / Fraud)' : `+${quantity} Units Restocked`}
+                </span>
+              </div>
             </div>
           </div>
 

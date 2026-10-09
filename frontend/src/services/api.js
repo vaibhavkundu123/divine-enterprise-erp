@@ -90,6 +90,7 @@ export const api = {
   damageReturn: (id) => request(`/customer-returns/${id}/damage`, { method: 'POST' }),
   qcReturn: (id, grade, notes = '') => request(`/customer-returns/${id}/qc?grade=${encodeURIComponent(grade)}${notes ? `&notes=${encodeURIComponent(notes)}` : ''}`, { method: 'POST' }),
   restockReturn: (id) => request(`/customer-returns/${id}/restock`, { method: 'POST' }),
+  settleReturnClaim: (id, data) => request(`/customer-returns/${id}/settle-claim`, { method: 'POST', body: JSON.stringify(data) }),
   bulkRestockReturns: () => request('/customer-returns/bulk-restock', { method: 'POST' }),
   updateReturn: (id, data) => request(`/customer-returns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteReturn: (id) => request(`/customer-returns/${id}`, { method: 'DELETE' }),

@@ -111,6 +111,16 @@ def test_reverse_logistics_and_realized_cash_formulas():
     )
     assert adj_rev == 9200.0
 
+    # 11b. Adjusted Sales Revenue with Settled Claim
+    # E.g. Refund 366.57, Claim 332.58 -> Net deduction is only 33.99
+    adj_rev_claim = calculate_adjusted_revenue(
+        total_system_revenue=10000.0,
+        rto_reversed_revenue_received=500.0,
+        cr_refunds_issued_arrived=366.57,
+        cr_claims_settled=332.58,
+    )
+    assert adj_rev_claim == 9466.01
+
     # 12. Adjusted Units Sold
     adj_units = calculate_adjusted_units_sold(
         total_units_sold=100,
