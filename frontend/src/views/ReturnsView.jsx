@@ -39,6 +39,9 @@ export default function ReturnsView() {
   const [secondaryReason, setSecondaryReason] = useState('');
   const [reverseAwb, setReverseAwb] = useState('');
   const [salesList, setSalesList] = useState([]);
+  const [saleSearch, setSaleSearch] = useState('');
+  const [saleSortOrder, setSaleSortOrder] = useState('asc');
+  const [selectedSaleId, setSelectedSaleId] = useState('');
 
   const loadReturns = () => {
     setLoading(true);
@@ -48,14 +51,34 @@ export default function ReturnsView() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    loadReturns();
+  const loadSalesList = () => {
     api.getSales()
       .then((data) => {
-        if (Array.isArray(data)) setSalesList(data.slice(-35).reverse());
+        if (Array.isArray(data)) setSalesList(data);
       })
       .catch((err) => console.error('Failed to load sales for return auto-fill:', err));
+  };
+
+  useEffect(() => {
+    loadReturns();
+    loadSalesList();
+    const handleSaleSync = () => loadSalesList();
+    window.addEventListener('divine-sale-created', handleSaleSync);
+    return () => window.removeEventListener('divine-sale-created', handleSaleSync);
   }, []);
+
+  const resetAddForm = () => {
+    setDate(new Date().toISOString().split('T')[0]);
+    setStyleNo('');
+    setQuantity(1);
+    setRefundAmount('');
+    setReverseFee(175);
+    setPrimaryReason('Size Too Small / Fit Issue');
+    setSecondaryReason('');
+    setReverseAwb('');
+    setSaleSearch('');
+    setSelectedSaleId('');
+  };
 
   const handleReceive = async (id) => { try { await api.receiveReturn(id); loadReturns(); } catch (err) { alert(err.message); } };
   const handleRestock = async (id) => { try { await api.restockReturn(id); loadReturns(); } catch (err) { alert(err.message); } };
@@ -67,10 +90,28 @@ export default function ReturnsView() {
     e.preventDefault();
     try {
       await api.createReturn({ date, style_no: styleNo.trim(), quantity: parseInt(quantity, 10), refund_amount: parseFloat(refundAmount), reverse_fee: parseFloat(reverseFee || 0), primary_reason: primaryReason, secondary_reason: secondaryReason || null, reverse_awb: reverseAwb || null });
-      setShowAddModal(false); setStyleNo(''); setQuantity(1); setRefundAmount(''); setReverseFee(175); setPrimaryReason('Size Too Small / Fit Issue'); setSecondaryReason(''); setReverseAwb('');
+      setShowAddModal(false);
+      resetAddForm();
       loadReturns();
     } catch (err) { alert(err.message); }
   };
+
+  const displayedSales = React.useMemo(() => {
+    let list = [...salesList];
+    if (saleSortOrder === 'desc') {
+      list.reverse();
+    }
+    if (saleSearch.trim()) {
+      const q = saleSearch.toLowerCase().trim();
+      list = list.filter((s) => {
+        const slNo = String(s.sl_no ?? s.id ?? '').toLowerCase();
+        const sku = String(s.style_no ?? '').toLowerCase();
+        const dateStr = String(s.date ?? '').toLowerCase();
+        return slNo.includes(q) || sku.includes(q) || dateStr.includes(q);
+      });
+    }
+    return list;
+  }, [salesList, saleSortOrder, saleSearch]);
 
   const holdingCount = returns.filter((r) => r.status === 'Received' || r.status === 'Intake').length;
 
@@ -145,7 +186,18 @@ export default function ReturnsView() {
             <button onClick={handleExcelExport} className="btn btn-outline text-xs px-3 h-9"><Download className="w-3.5 h-3.5" /><span>Excel</span></button>
             <button onClick={handleCsvExport} className="btn btn-outline text-xs px-3 h-9"><Download className="w-3.5 h-3.5" /><span>CSV</span></button>
           </div>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9" data-tour="returns-add-btn"><Plus className="w-3.5 h-3.5" /><span>Log Return</span></button>
+          <button
+            onClick={() => {
+              resetAddForm();
+              loadSalesList();
+              setShowAddModal(true);
+            }}
+            className="btn btn-primary text-xs px-3.5 h-9"
+            data-tour="returns-add-btn"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Log Return</span>
+          </button>
         </div>
       </div>
 
@@ -239,11 +291,71 @@ export default function ReturnsView() {
           <div className="glass-panel w-full max-w-lg p-6 border border-slate-700 max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-white text-base mb-4 pb-2 border-b border-slate-800">Log Customer Return & Reverse Pickup</h3>
             <form onSubmit={handleCreate} className="space-y-3">
-              <div>
-                <label htmlFor="cr-sale-select" className="text-xs text-slate-300 block mb-1 font-semibold text-purple-400">⚡ Fast Auto-Fill from Customer Sale (Optional)</label>
-                <select id="cr-sale-select" className="input-field text-xs mb-1" onChange={(e) => { const idx = e.target.value; if (idx === '') return; const s = salesList[parseInt(idx, 10)]; if (s) { setStyleNo(s.style_no || ''); const sQty = s.quantity_sold || 1; setQuantity(sQty); const sTotal = s.total_revenue || (sQty * (s.unit_price || 0)); setRefundAmount(Number(sTotal).toFixed(2)); if (s.date) setDate(s.date); } }}>
-                  <option value="">-- Or enter style details manually below --</option>
-                  {salesList.map((s, idx) => { const uPrice = s.unit_price || (s.total_revenue / (s.quantity_sold || 1)) || 0; return (<option key={idx} value={idx}>{s.date} • {s.style_no} ({s.quantity_sold} units @ ${Number(uPrice).toFixed(2)} = ${Number(s.total_revenue).toFixed(2)})</option>); })}
+              <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="cr-sale-select" className="text-xs font-semibold text-purple-400">
+                    ⚡ Fast Auto-Fill from Customer Sale (Optional)
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    {salesList.length} sales from beginning
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={saleSearch}
+                      onChange={(e) => setSaleSearch(e.target.value)}
+                      placeholder="Filter SKU, Date, Sl No..."
+                      className="input-field text-xs pl-8 py-1.5"
+                    />
+                  </div>
+                  <select
+                    value={saleSortOrder}
+                    onChange={(e) => setSaleSortOrder(e.target.value)}
+                    className="input-field text-xs py-1.5 bg-slate-800"
+                    title="List order"
+                  >
+                    <option value="asc">From Beginning (#1 → Latest)</option>
+                    <option value="desc">Newest First (Latest → #1)</option>
+                  </select>
+                </div>
+
+                <select
+                  id="cr-sale-select"
+                  className="input-field text-xs"
+                  value={selectedSaleId}
+                  onChange={(e) => {
+                    const saleId = e.target.value;
+                    setSelectedSaleId(saleId);
+                    if (!saleId) return;
+                    const s = salesList.find((item) => String(item.id) === String(saleId));
+                    if (s) {
+                      setStyleNo(s.style_no || '');
+                      const sQty = s.quantity_sold || 1;
+                      setQuantity(sQty);
+                      const unitP = s.selling_price || s.unit_price || (sQty ? s.total_revenue / sQty : 0) || 0;
+                      const sTotal = s.total_revenue || (sQty * unitP);
+                      setRefundAmount(Number(sTotal).toFixed(2));
+                      if (s.date) setDate(s.date);
+                    }
+                  }}
+                >
+                  <option value="">
+                    {displayedSales.length === 0
+                      ? `-- No sales matching "${saleSearch}" --`
+                      : `-- Choose from all ${displayedSales.length} recorded sales --`}
+                  </option>
+                  {displayedSales.map((s) => {
+                    const uPrice = s.selling_price || s.unit_price || (s.quantity_sold ? s.total_revenue / s.quantity_sold : 0) || 0;
+                    return (
+                      <option key={s.id} value={s.id}>
+                        #{s.sl_no || s.id} • {s.date} • {s.style_no} ({s.quantity_sold} unit{s.quantity_sold > 1 ? 's' : ''} @ ₹{Number(uPrice).toFixed(2)} = ₹{Number(s.total_revenue).toFixed(2)})
+                      </option>
+                    );
+                  })}
                 </select>
                 <span className="text-[11px] text-slate-400 block">Selecting an order auto-fills Style Number, Quantity, and Refund Amount.</span>
               </div>
@@ -253,8 +365,8 @@ export default function ReturnsView() {
               </div>
               <div><label htmlFor="return-style" className="text-xs text-slate-300 block mb-1">Style SKU *</label><input id="return-style" name="return_style" type="text" value={styleNo} onChange={(e) => setStyleNo(e.target.value)} placeholder="e.g. DE26003B" required className="input-field uppercase" /></div>
               <div className="grid grid-cols-2 gap-2">
-                <div><label htmlFor="return-refund" className="text-xs text-slate-300 block mb-1">Customer Refund Amount ($) *</label><input id="return-refund" name="return_refund" type="number" step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} required className="input-field" /></div>
-                <div><label htmlFor="return-fee" className="text-xs text-slate-300 block mb-1">Reverse Courier Shipping Fee ($)</label><input id="return-fee" name="return_fee" type="number" step="0.01" value={reverseFee} onChange={(e) => setReverseFee(e.target.value)} className="input-field" /></div>
+                <div><label htmlFor="return-refund" className="text-xs text-slate-300 block mb-1">Customer Refund Amount (₹) *</label><input id="return-refund" name="return_refund" type="number" step="0.01" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} required className="input-field" /></div>
+                <div><label htmlFor="return-fee" className="text-xs text-slate-300 block mb-1">Reverse Courier Shipping Fee (₹)</label><input id="return-fee" name="return_fee" type="number" step="0.01" value={reverseFee} onChange={(e) => setReverseFee(e.target.value)} className="input-field" /></div>
               </div>
               <div><label htmlFor="return-reason" className="text-xs text-slate-300 block mb-1">Primary Return Reason *</label>
                 <select id="return-reason" name="return_reason" value={primaryReason} onChange={(e) => setPrimaryReason(e.target.value)} className="input-field">
@@ -273,7 +385,7 @@ export default function ReturnsView() {
               <div><label htmlFor="return-secondary-reason" className="text-xs text-slate-300 block mb-1">Secondary Return Reason</label><input id="return-secondary-reason" name="return_secondary_reason" type="text" value={secondaryReason} onChange={(e) => setSecondaryReason(e.target.value)} placeholder="e.g. Customer wanted exchange for larger size" className="input-field" /></div>
               <div><label htmlFor="return-awb" className="text-xs text-slate-300 block mb-1">Reverse Courier & AWB #</label><input id="return-awb" name="return_awb" type="text" value={reverseAwb} onChange={(e) => setReverseAwb(e.target.value)} placeholder="e.g. Delhivery AWB-9821389" className="input-field" /></div>
               <div className="flex justify-end gap-2 pt-3">
-                <button type="button" onClick={() => setShowAddModal(false)} className="btn btn-outline text-xs">Cancel</button>
+                <button type="button" onClick={() => { setShowAddModal(false); resetAddForm(); }} className="btn btn-outline text-xs">Cancel</button>
                 <button type="submit" className="btn btn-primary text-xs">Log Customer Return</button>
               </div>
             </form>

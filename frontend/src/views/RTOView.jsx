@@ -35,6 +35,9 @@ export default function RTOView() {
   const [newFee, setNewFee] = useState(0);
   const [newTracking, setNewTracking] = useState('');
   const [salesList, setSalesList] = useState([]);
+  const [saleSearch, setSaleSearch] = useState('');
+  const [saleSortOrder, setSaleSortOrder] = useState('asc');
+  const [selectedSaleId, setSelectedSaleId] = useState('');
 
   const loadRTO = () => {
     setLoading(true);
@@ -44,14 +47,32 @@ export default function RTOView() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    loadRTO();
+  const loadSalesList = () => {
     api.getSales()
       .then((data) => {
-        if (Array.isArray(data)) setSalesList(data.slice(-35).reverse());
+        if (Array.isArray(data)) setSalesList(data);
       })
       .catch((err) => console.error('Failed to load sales list for RTO auto-fill:', err));
+  };
+
+  useEffect(() => {
+    loadRTO();
+    loadSalesList();
+    const handleSaleSync = () => loadSalesList();
+    window.addEventListener('divine-sale-created', handleSaleSync);
+    return () => window.removeEventListener('divine-sale-created', handleSaleSync);
   }, []);
+
+  const resetAddForm = () => {
+    setNewDate(new Date().toISOString().split('T')[0]);
+    setNewStyle('');
+    setNewQty(1);
+    setNewPrice('');
+    setNewFee(0);
+    setNewTracking('');
+    setSaleSearch('');
+    setSelectedSaleId('');
+  };
 
   const handleReceive = async (id) => {
     try {
@@ -113,11 +134,29 @@ export default function RTOView() {
         tracking_no: newTracking,
       });
       setShowAddModal(false);
+      resetAddForm();
       loadRTO();
     } catch (err) {
       alert(err.message);
     }
   };
+
+  const displayedSales = React.useMemo(() => {
+    let list = [...salesList];
+    if (saleSortOrder === 'desc') {
+      list.reverse();
+    }
+    if (saleSearch.trim()) {
+      const q = saleSearch.toLowerCase().trim();
+      list = list.filter((s) => {
+        const slNo = String(s.sl_no ?? s.id ?? '').toLowerCase();
+        const sku = String(s.style_no ?? '').toLowerCase();
+        const dateStr = String(s.date ?? '').toLowerCase();
+        return slNo.includes(q) || sku.includes(q) || dateStr.includes(q);
+      });
+    }
+    return list;
+  }, [salesList, saleSortOrder, saleSearch]);
 
   const holdingCount = rtos.filter((r) => r.status === 'Received').length;
 
@@ -256,7 +295,15 @@ export default function RTOView() {
               <span>CSV</span>
             </button>
           </div>
-          <button onClick={() => setShowAddModal(true)} className="btn btn-primary text-xs px-3.5 h-9" data-tour="rto-add-btn">
+          <button
+            onClick={() => {
+              resetAddForm();
+              loadSalesList();
+              setShowAddModal(true);
+            }}
+            className="btn btn-primary text-xs px-3.5 h-9"
+            data-tour="rto-add-btn"
+          >
             <Plus className="w-3.5 h-3.5" />
             <span>Log RTO</span>
           </button>
@@ -394,35 +441,69 @@ export default function RTOView() {
       {/* Add RTO Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="glass-panel w-full max-w-md p-6 border border-slate-700">
+          <div className="glass-panel w-full max-w-md p-6 border border-slate-700 max-h-[90vh] overflow-y-auto">
             <h3 className="font-bold text-white text-base mb-4 pb-2 border-b border-slate-800">Log In-Transit RTO Parcel</h3>
             <form onSubmit={handleCreate} className="space-y-3">
-              <div>
-                <label htmlFor="rto-sale-select" className="text-xs text-slate-300 block mb-1 font-semibold text-blue-400">
-                  ⚡ Fast Auto-Fill from Recorded Sale (Optional)
-                </label>
+              <div className="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="rto-sale-select" className="text-xs font-semibold text-blue-400">
+                    ⚡ Fast Auto-Fill from Recorded Sale (Optional)
+                  </label>
+                  <span className="text-[11px] text-slate-400">
+                    {salesList.length} sales from beginning
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={saleSearch}
+                      onChange={(e) => setSaleSearch(e.target.value)}
+                      placeholder="Filter SKU, Date, Sl No..."
+                      className="input-field text-xs pl-8 py-1.5"
+                    />
+                  </div>
+                  <select
+                    value={saleSortOrder}
+                    onChange={(e) => setSaleSortOrder(e.target.value)}
+                    className="input-field text-xs py-1.5 bg-slate-800"
+                    title="List order"
+                  >
+                    <option value="asc">From Beginning (#1 → Latest)</option>
+                    <option value="desc">Newest First (Latest → #1)</option>
+                  </select>
+                </div>
+
                 <select
                   id="rto-sale-select"
-                  className="input-field text-xs mb-1"
+                  className="input-field text-xs"
+                  value={selectedSaleId}
                   onChange={(e) => {
-                    const idx = e.target.value;
-                    if (idx === '') return;
-                    const s = salesList[parseInt(idx, 10)];
+                    const saleId = e.target.value;
+                    setSelectedSaleId(saleId);
+                    if (!saleId) return;
+                    const s = salesList.find((item) => String(item.id) === String(saleId));
                     if (s) {
                       setNewStyle(s.style_no || '');
                       setNewQty(s.quantity_sold || 1);
-                      const unitP = s.unit_price || (s.total_revenue / (s.quantity_sold || 1)) || 0;
-                      setNewPrice(unitP.toFixed(2));
+                      const unitP = s.selling_price || s.unit_price || (s.quantity_sold ? s.total_revenue / s.quantity_sold : 0) || 0;
+                      setNewPrice(Number(unitP).toFixed(2));
                       if (s.date) setNewDate(s.date);
                     }
                   }}
                 >
-                  <option value="">-- Or type style manually below --</option>
-                  {salesList.map((s, idx) => {
-                    const uPrice = s.unit_price || (s.total_revenue / (s.quantity_sold || 1)) || 0;
+                  <option value="">
+                    {displayedSales.length === 0
+                      ? `-- No sales matching "${saleSearch}" --`
+                      : `-- Choose from all ${displayedSales.length} recorded sales --`}
+                  </option>
+                  {displayedSales.map((s) => {
+                    const uPrice = s.selling_price || s.unit_price || (s.quantity_sold ? s.total_revenue / s.quantity_sold : 0) || 0;
                     return (
-                      <option key={idx} value={idx}>
-                        {s.date} • {s.style_no} ({s.quantity_sold} units @ ${Number(uPrice).toFixed(2)} = ${Number(s.total_revenue).toFixed(2)})
+                      <option key={s.id} value={s.id}>
+                        #{s.sl_no || s.id} • {s.date} • {s.style_no} ({s.quantity_sold} unit{s.quantity_sold > 1 ? 's' : ''} @ ₹{Number(uPrice).toFixed(2)} = ₹{Number(s.total_revenue).toFixed(2)})
                       </option>
                     );
                   })}
@@ -448,11 +529,11 @@ export default function RTOView() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="new-rto-price" className="text-xs text-slate-300 block mb-1">Sale Price ($)</label>
+                  <label htmlFor="new-rto-price" className="text-xs text-slate-300 block mb-1">Sale Price (₹)</label>
                   <input id="new-rto-price" name="rto_price" type="number" step="0.01" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} required className="input-field" />
                 </div>
                 <div>
-                  <label htmlFor="new-rto-fee" className="text-xs text-slate-300 block mb-1">Courier Fee ($)</label>
+                  <label htmlFor="new-rto-fee" className="text-xs text-slate-300 block mb-1">Courier Fee (₹)</label>
                   <input id="new-rto-fee" name="rto_fee" type="number" step="0.01" value={newFee} onChange={(e) => setNewFee(e.target.value)} className="input-field" />
                 </div>
               </div>
@@ -461,7 +542,7 @@ export default function RTOView() {
                 <input id="new-rto-tracking" name="rto_tracking" type="text" value={newTracking} onChange={(e) => setNewTracking(e.target.value)} placeholder="e.g. Delhivery AWB-1490711" className="input-field" />
               </div>
               <div className="flex justify-end gap-2 pt-3">
-                <button type="button" onClick={() => setShowAddModal(false)} className="btn btn-outline text-xs">Cancel</button>
+                <button type="button" onClick={() => { setShowAddModal(false); resetAddForm(); }} className="btn btn-outline text-xs">Cancel</button>
                 <button type="submit" className="btn btn-primary text-xs">Save RTO Parcel</button>
               </div>
             </form>
